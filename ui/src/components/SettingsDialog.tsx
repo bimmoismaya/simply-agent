@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { shapeProblem, TOKEN_PAGES, type TokenCheck } from "../../../shared/tokens.ts";
 import type { Agent } from "../../../shared/types.ts";
 import { KNOWN_MODELS, type DesktopSettings, type SettingsInfo, type ToolMode } from "../desktop";
 
@@ -11,6 +12,8 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tokens, setTokens] = useState<Record<string, string>>({});
+  // Hasil pemeriksaan token ke penyedia setelah klik pasang (atau alasan penolakan bentuknya).
+  const [checks, setChecks] = useState<Record<string, TokenCheck>>({});
   // Daftar model dari akun provider: null = belum/sedang diambil.
   const [models, setModels] = useState<{ value: string; name: string }[] | null>(null);
   const [modelsError, setModelsError] = useState<string | null>(null);
@@ -86,7 +89,8 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
   const saveToken = async (provider: string) => {
     setError(null);
     const r = await window.simply!.setToken(provider, tokens[provider] ?? "");
-    if (!r.ok) { setError(r.error); return; }
+    if (!r.ok) { setChecks({ ...checks, [provider]: { state: "rejected", detail: r.error } }); return; }
+    setChecks({ ...checks, [provider]: r.check });
     setTokens({ ...tokens, [provider]: "" });
     setInfo({ ...info, tokenSet: { ...info.tokenSet, [provider]: !!tokens[provider]?.trim() } });
     if (provider === "claude") setTokenRev((n) => n + 1);
@@ -137,7 +141,7 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
           <h3 className="mb-1 font-display text-[12px] uppercase tracking-[0.25em] text-signal">token provider</h3>
           <p className="mb-2 text-[10px] text-dim">
             Wajib untuk tiap provider yang dipakai agent. Claude: jalankan <code className="text-zinc-100">claude setup-token</code>, login di browser, tempel kode dari browser ke terminal, lalu tempel token yang dicetak terminal di sini.
-            Codex: API key OpenAI. Gemini: API key Gemini. Token disimpan di komputer ini dan tidak ditampilkan lagi. Kosongkan lalu klik pasang untuk menghapus.
+            Codex: API key OpenAI. Gemini: API key Gemini (tombol di bawah membuka halaman pembuatannya). Setelah dipasang, token diperiksa ke penyedianya. Token disimpan di komputer ini dan tidak ditampilkan lagi. Kosongkan lalu klik pasang untuk menghapus.
           </p>
           <div className="grid grid-cols-[70px_1fr_auto] items-center gap-x-2 gap-y-1">
             {["claude", "codex", "gemini"].map((p) => (
@@ -145,9 +149,31 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
                 <span className="text-zinc-100">{p} <span className={info.tokenSet[p] ? "text-green-400" : "text-amber-300"}>{info.tokenSet[p] ? "✓" : "kosong"}</span></span>
                 <input type="password" autoComplete="off" spellCheck={false} placeholder={info.tokenSet[p] ? "terisi; tempel untuk mengganti" : "tempel token"}
                   value={tokens[p] ?? ""} onChange={(e) => setTokens({ ...tokens, [p]: e.target.value })} className={field} aria-label={`Token ${p}`} />
-                <button onClick={() => saveToken(p)} disabled={!tokens[p]?.trim() && !info.tokenSet[p]} className={`${btn} border-signal/40 text-zinc-100 hover:bg-signal/10`}>pasang</button>
+                <button onClick={() => saveToken(p)} disabled={(!tokens[p]?.trim() && !info.tokenSet[p]) || !!shapeProblem(p, tokens[p] ?? "")} className={`${btn} border-signal/40 text-zinc-100 hover:bg-signal/10`}>pasang</button>
               </label>
             ))}
+          </div>
+          <div className="mt-2 space-y-1">
+            {["claude", "codex", "gemini"].map((p) => {
+              const live = shapeProblem(p, tokens[p] ?? "");
+              const c = checks[p];
+              // Untuk Claude, "akun tidak terbaca" sudah dijelaskan peringatan di bawah.
+              const showCheck = !live && c && !(p === "claude" && c.detail.startsWith("akun tidak terbaca"));
+              return (
+                <div key={p} className="text-[10px]">
+                  {live && <p data-testid={`token-problem-${p}`} className="text-amber-300">{p}: {live}</p>}
+                  {showCheck && (
+                    <p data-testid={`token-status-${p}`} className={c.state === "valid" ? "text-green-400" : c.state === "rejected" ? "text-amber-300" : "text-dim"}>
+                      {p}: {c.state === "valid" ? "✓ " : c.state === "rejected" ? "✗ " : ""}{c.detail}
+                    </p>
+                  )}
+                  {TOKEN_PAGES[p] && (
+                    <button type="button" onClick={() => void window.simply!.openTokenPage(p)}
+                      className="text-signal underline outline-none hover:text-cyan-200 focus-visible:ring-1 focus-visible:ring-signal">buat key {p} di browser</button>
+                  )}
+                </div>
+              );
+            })}
           </div>
           {hasClaude && models !== null && !account?.email && (
             <p role="alert" data-testid="token-warning" className="mt-2 border border-amber-400/40 px-2 py-1 text-[10px] text-amber-300">

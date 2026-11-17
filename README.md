@@ -36,7 +36,12 @@ Token ditempel di **⚙ pengaturan → token provider → pasang**. Disimpan han
 - **Codex:** buat API key OpenAI di <https://platform.openai.com/api-keys>.
 - **Gemini:** buat API key di Google AI Studio, <https://aistudio.google.com/apikey>.
 
-Codex dan Gemini belum pernah diuji di app ini (belum ada akunnya), jadi petunjuk keduanya belum terbukti.
+Yang dibantu app saat menempel:
+- Salah tempel yang jelas langsung ditandai dan tombol pasang dinonaktifkan: kode dari browser (berisi `#`), URL, API key Anthropic di kolom Claude, atau teks bersepasi. Awalan `Bearer ` dan spasi di ujung dibuang otomatis.
+- Setelah dipasang, token diperiksa ke penyedianya dan hasilnya tampil di bawah kolom (terhubung, ditolak, atau tidak bisa dipastikan). Claude dicek lewat info akun; Codex dan Gemini lewat satu permintaan daftar model (tanpa biaya) yang hanya dikirim ke penyedianya sendiri. Token yang ditolak tetap tersimpan, jadi tempel ulang untuk menggantinya.
+- Untuk Codex dan Gemini ada tombol "buat key di browser" yang membuka halaman pembuatan key.
+
+Penolakan Codex dan Gemini sudah dicoba ke server aslinya dengan key palsu (HTTP 401 dan 400). Kasus "diterima" belum pernah diuji dengan key sungguhan, dan CLI Codex dan Gemini belum pernah dijalankan di app ini.
 
 ## Status saat ini
 
