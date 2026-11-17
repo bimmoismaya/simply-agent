@@ -11,7 +11,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { Drawer } from "./components/Drawer";
 import { SettingsDialog } from "./components/SettingsDialog";
-import type { AccountSummary, AuthInfo } from "./desktop";
+import type { AccountSummary } from "./desktop";
 
 const nodeTypes = { agent: AgentNode, group: GroupNode, preview: PreviewNode };
 const edgeTypes = { pulse: PulseEdge };
@@ -27,8 +27,6 @@ function Canvas() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const desktop = !!window.simply;
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [auth, setAuth] = useState<AuthInfo | null>(null);
-  const [rechecking, setRechecking] = useState(false);
   const [workspace, setWorkspace] = useState<string>();
   const [account, setAccount] = useState<AccountSummary>();
   const [nickname, setNickname] = useState("");
@@ -54,12 +52,6 @@ function Canvas() {
     window.simply?.claudeInfo().then((r) => setAccount(r.ok ? r.account : undefined)).catch(() => setAccount(undefined));
   }, []);
   useEffect(() => { loadAccount(); }, [loadAccount]);
-  const checkAuth = useCallback(async () => {
-    if (!window.simply) return;
-    setRechecking(true);
-    try { setAuth(await window.simply.authStatus()); } catch { setAuth(null); } finally { setRechecking(false); }
-  }, []);
-  useEffect(() => { void checkAuth(); }, [checkAuth]);
   const ordered = useMemo(() => orderAgents(agents), [agents]);
   const { nodes, boxes } = useMemo(() => buildLayout(agents, selectedId, PREVIEW), [agents, selectedId]);
 
@@ -123,7 +115,7 @@ function Canvas() {
             style={{ background: "transparent" }}
           >
             <Background gap={22} size={1} color="#14333a" />
-            <MiniMap
+            {!locked && (<MiniMap
               pannable
               zoomable
               bgColor="#0a0e12"
@@ -132,25 +124,8 @@ function Canvas() {
               nodeStrokeWidth={4}
               nodeColor={(n) => (n.type === "group" ? "rgba(34,211,238,0.08)" : n.type === "preview" ? "#14333a" : "#22d3ee")}
               nodeStrokeColor={(n) => (n.type === "group" ? "rgba(34,211,238,0.6)" : "transparent")}
-            />
+            />)}
           </ReactFlow>
-          {desktop && auth?.loggedIn === false && (
-            <div role="alert" data-testid="auth-banner" className="absolute inset-x-0 top-3 z-20 mx-auto w-[min(620px,calc(100%-2rem))] border border-amber-400/70 bg-panel p-4 text-xs leading-5">
-              <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-amber-300">token belum diisi</p>
-              Agent tidak bisa jalan sebelum token diisi. Buka Pengaturan dan isi token di bagian token provider;
-              petunjuk cara mendapatkan token ada di sana.
-              <div className="mt-2">
-                <button onClick={() => setSettingsOpen(true)}
-                  className="mr-2 border border-amber-400/60 px-3 py-1 text-[11px] uppercase tracking-widest text-amber-200 outline-none hover:bg-amber-400/10 focus-visible:ring-1 focus-visible:ring-amber-300">
-                  buka pengaturan
-                </button>
-                <button onClick={checkAuth} disabled={rechecking}
-                  className="border border-amber-400/60 px-3 py-1 text-[11px] uppercase tracking-widest text-amber-200 outline-none hover:bg-amber-400/10 focus-visible:ring-1 focus-visible:ring-amber-300 disabled:opacity-40">
-                  {rechecking ? "memeriksa…" : "cek ulang"}
-                </button>
-              </div>
-            </div>
-          )}
           {connection === "no-token" && (
             <div role="alert" className="absolute inset-x-0 top-8 z-20 mx-auto w-[min(560px,calc(100%-2rem))] border border-signal/60 bg-panel p-4 text-xs leading-5">
               <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-red-400">token belum ada</p>
@@ -162,7 +137,7 @@ function Canvas() {
             <div data-testid="no-agents" className="absolute inset-0 z-10 flex items-center justify-center p-6 text-center">
               <div className="max-w-sm border border-signal/30 bg-panel/90 p-5 text-xs leading-5 text-dim">
                 <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-zinc-100">belum ada agent</p>
-                Agent muncul setelah token terpasang.
+                Agent muncul setelah token terpasang. Petunjuk cara mendapatkan token ada di Pengaturan, bagian token provider.
                 <div className="mt-3">
                   <button onClick={() => setSettingsOpen(true)}
                     className="border border-signal/50 px-3 py-1 text-[11px] uppercase tracking-widest text-cyan-100 outline-none hover:bg-signal/15 focus-visible:ring-1 focus-visible:ring-signal">
@@ -174,7 +149,7 @@ function Canvas() {
           )}
           {!locked && <CommandBar agents={ordered} onSend={sendCommand} onStopAll={stopAll} />}
         </main>
-        {settingsOpen && <SettingsDialog agents={orderAgents(allAgents)} onClose={() => { setSettingsOpen(false); void checkAuth(); loadAccount(); loadProfile(); }} />}
+        {settingsOpen && <SettingsDialog agents={orderAgents(allAgents)} onClose={() => { setSettingsOpen(false); loadAccount(); loadProfile(); }} />}
         {selected && <Drawer agent={selected} onClose={() => setSelectedId(null)} onControl={control} />}
       </div>
     </div>

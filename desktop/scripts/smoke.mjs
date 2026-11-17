@@ -78,7 +78,7 @@ try {
   mkdirSync(OUT, { recursive: true });
 
   // =============== Fase A: sesi pertama ===============
-  app1 = spawnApp({ SIMPLY_FAKE_AUTH: "out" }, PORT);
+  app1 = spawnApp({}, PORT);
   const s1 = await attach(app1, PORT);
   b1 = s1.browser;
   const { page, errors } = s1;
@@ -111,14 +111,6 @@ try {
   check("setelah token terpasang: 8 agent tampil", shown);
   check("simpan menutup pengaturan awal dan menandainya selesai", !(await dialogOpen(page)) && JSON.parse(readFileSync(join(PROFILE, "settings.json"), "utf8")).setupDone === true);
 
-  // Banner login: cek pertama "belum login", tombol Cek ulang menghilangkannya.
-  const banner = await page.waitForSelector('[data-testid="auth-banner"]', { timeout: 5000 }).then(() => true).catch(() => false);
-  check("banner 'belum login ke Claude' tampil", banner);
-  if (banner) {
-    await page.evaluate(() => [...document.querySelectorAll('[data-testid="auth-banner"] button')].find((b) => /cek ulang/i.test(b.textContent)).click());
-    const gone = await page.waitForFunction(() => !document.querySelector('[data-testid="auth-banner"]'), { timeout: 5000 }).then(() => true).catch(() => false);
-    check("Cek ulang menghilangkan banner setelah login", gone);
-  }
 
   // Muat ulang dari dalam halaman (page.reload milik Puppeteer terputus oleh protokol app://),
   // supaya listener error menangkap start UI.
@@ -137,8 +129,8 @@ try {
     bridgeKeys: Object.keys(window.simply ?? {}).sort(),
   }));
   check("renderer tidak punya require/process (tanpa akses Node)", surface.require === "undefined" && surface.process === "undefined", JSON.stringify(surface));
-  const expectedKeys = ["authStatus", "chooseWorkspace", "claudeInfo", "connection", "getSettings", "onOpenSettings", "saveSettings", "setToken"];
-  check("jembatan preload hanya menyediakan 8 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
+  const expectedKeys = ["chooseWorkspace", "claudeInfo", "connection", "getSettings", "onOpenSettings", "saveSettings", "setToken"];
+  check("jembatan preload hanya menyediakan 7 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
 
   // CSP dibuktikan lewat pelanggaran sungguhan: fetch ke luar harus ditolak oleh connect-src, bukan oleh jaringan.
   const violation = await page.evaluate(() => new Promise((res) => {

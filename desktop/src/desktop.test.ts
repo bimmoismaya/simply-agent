@@ -4,7 +4,6 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Agent } from "../../shared/types.ts";
-import { tokenStatus } from "./auth.ts";
 import { agentNote, budgetNote, isBusy } from "./notify.ts";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, validateWorkspace, SettingsSchema } from "./settings.ts";
 
@@ -73,11 +72,6 @@ test("isBusy: running atau punya antrean", () => {
   assert.equal(isBusy([agent(), agent({ status: "done" })]), false);
   assert.equal(isBusy([agent({ status: "running" })]), true);
   assert.equal(isBusy([agent({ queued: 2, paused: true, status: "paused" })]), true);
-});
-
-test("tokenStatus: kosong memblokir, terisi lolos", () => {
-  assert.equal(tokenStatus("").loggedIn, false);
-  assert.equal(tokenStatus("sk-ant-oat01-abc").loggedIn, true);
 });
 
 test("nickname: spasi dipangkas, kosong bawaan, lebih dari 40 karakter ditolak", () => {

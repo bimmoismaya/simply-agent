@@ -10,7 +10,7 @@ import { startServer } from "../../server/src/index.ts";
 import { defaultRunner, type Limits, type Runner } from "../../server/src/engine.ts";
 import { loadClaudeInfo, type ClaudeInfo } from "../../server/src/models.ts";
 import { ensurePlugins, isInstalled, PLUGINS } from "../../server/src/plugins.ts";
-import { TOKEN_ENV, tokenStatus, type AuthStatus } from "./auth.ts";
+import { TOKEN_ENV } from "./auth.ts";
 import { agentNote, budgetNote, isBusy } from "./notify.ts";
 import { defaultWorkspace, loadSettings, PROVIDERS, saveSettings, SettingsSchema, validateWorkspace, type Settings } from "./settings.ts";
 import { resolveUiFile } from "./uipath.ts";
@@ -19,8 +19,6 @@ export interface LaunchOptions {
   /** Untuk smoke test: ganti agent sungguhan dengan runner palsu. */
   runner?: Runner;
   limits?: Limits;
-  /** Untuk smoke test: ganti pengecekan token Claude. */
-  authCheck?: () => Promise<AuthStatus>;
   /** Untuk smoke test: ganti pengambilan model dan info akun dari provider. */
   claudeInfo?: () => Promise<ClaudeInfo>;
   /** Untuk smoke test: buka port DevTools protocol (hanya di localhost). Tidak pernah diisi di app biasa. */
@@ -167,7 +165,6 @@ export async function launch(opts: LaunchOptions = {}) {
   const port = await server.ready;
   const engine = server.engine;
 
-  const authCheck = opts.authCheck ?? (async () => tokenStatus(settings.tokens.claude ?? ""));
   let win: BrowserWindow;
   let tray: Tray | null = null;
   let quitting = false;
@@ -262,8 +259,6 @@ export async function launch(opts: LaunchOptions = {}) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   });
-
-  guarded("simply:authStatus", () => authCheck());
 
   // ---- Keamanan jendela ----
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
