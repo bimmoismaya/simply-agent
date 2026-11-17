@@ -38,13 +38,15 @@ jobs:
           report() {
             name=$1; shift
             if "$@" > out.txt 2>&1; then tail -n 6 out.txt; return 0; fi
-            msg=$(grep -E "^(not ok|# Subtest|\s+(✖|error:|message:|expected:|actual:|code:))|Error" out.txt | head -40 | cut -c1-200 | sed ':a;N;$!ba;s/\n/%0A/g')
+            msg=$(grep -E "✖|test at|Error|expected:|actual:" out.txt | head -40 | cut -c1-200 | sed ':a;N;$!ba;s/\n/%0A/g')
             echo "::error title=$name gagal::${msg:0:3500}"
             tail -n 60 out.txt
             return 1
           }
-          (cd server && report "tes server" npm test)
-          (cd desktop && report "tes desktop" npm test)
+          rc=0
+          (cd server && report "tes server" npm test) || rc=1
+          (cd desktop && report "tes desktop" npm test) || rc=1
+          exit $rc
 
       - name: Smoke test Electron (Linux, layar virtual)
         if: runner.os == 'Linux'
