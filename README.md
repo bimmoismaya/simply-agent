@@ -1,6 +1,6 @@
 # Simply Agent
 
-Multi-agent dengan UI kanvas node bergaya "mission control". Rencana dan prompt UI ada di [todo.md](todo.md).
+Multi-agent dengan UI kanvas node bergaya "mission control". Rencana dan prompt UI ada di [todo.md](todo.md). Lisensi: [MIT](LICENSE).
 
 ## WAJIB: setup plugin sebelum mengerjakan tugas apa pun
 
