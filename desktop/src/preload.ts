@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("simply", {
   saveSettings: (s: unknown): Promise<unknown> => ipcRenderer.invoke("simply:saveSettings", s),
   chooseWorkspace: (): Promise<unknown> => ipcRenderer.invoke("simply:chooseWorkspace"),
   setToken: (provider: string, token: string): Promise<unknown> => ipcRenderer.invoke("simply:setToken", { provider, token }),
+  openTokenPage: (provider: string): Promise<unknown> => ipcRenderer.invoke("simply:openTokenPage", { provider }),
   claudeInfo: (): Promise<unknown> => ipcRenderer.invoke("simply:claudeInfo"),
   onOpenSettings: (cb: () => void): (() => void) => {
     const listener = () => cb();

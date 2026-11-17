@@ -1,3 +1,4 @@
+import type { TokenCheck } from "../../shared/tokens.ts";
 // Tipe jembatan preload app desktop (window.simply). Di browser biasa objek ini tidak ada.
 export type ToolMode = "read-only" | "all";
 
@@ -34,7 +35,8 @@ export interface SimplyBridge {
   getSettings(): Promise<SettingsInfo>;
   saveSettings(s: DesktopSettings): Promise<SaveResult>;
   chooseWorkspace(): Promise<ChooseResult>;
-  setToken(provider: string, token: string): Promise<{ ok: true } | { ok: false; error: string }>;
+  setToken(provider: string, token: string): Promise<{ ok: true; check: TokenCheck } | { ok: false; error: string }>;
+  openTokenPage(provider: string): Promise<{ ok: boolean }>;
   claudeInfo(): Promise<{ ok: true; models: { value: string; name: string }[]; account: AccountSummary } | { ok: false; error: string }>;
   onOpenSettings(cb: () => void): () => void;
 }

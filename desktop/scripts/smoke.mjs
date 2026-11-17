@@ -102,6 +102,29 @@ try {
   await page.type('input[aria-label="Token claude"]', "token-uji");
   await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^pasang$/i.test(b.textContent.trim())).click());
   await page.waitForSelector('select[aria-label="Model Dax"]', { timeout: 5000 });
+
+  // Petunjuk salah tempel muncul seketika (tanpa jaringan) dan tombol pasang nonaktif.
+  await page.type('input[aria-label="Token claude"]', "KodeBrowser#state123");
+  const problem = await page.waitForSelector('[data-testid="token-problem-claude"]', { timeout: 3000 }).then(() => true).catch(() => false);
+  const pasangOff = await page.$eval('input[aria-label="Token claude"]', (i) => i.closest("label").querySelector("button").disabled);
+  check("tempel kode browser: petunjuk muncul dan tombol pasang nonaktif", problem && pasangOff);
+  await page.click('input[aria-label="Token claude"]');
+  await page.keyboard.down("Control"); await page.keyboard.press("a"); await page.keyboard.up("Control"); await page.keyboard.press("Backspace");
+
+  // Hasil pemeriksaan per provider (di smoke: penyedia palsu).
+  const clickPasang = (p) => page.$eval(`input[aria-label="Token ${p}"]`, (i) => i.closest("label").querySelector("button").click());
+  const statusHas = (p, mark) => page.waitForFunction((id, m) => document.querySelector(`[data-testid="token-status-${id}"]`)?.textContent.includes(m), { timeout: 3000 }, p, mark).then(() => true).catch(() => false);
+  await page.type('input[aria-label="Token codex"]', "kunci-salah"); await clickPasang("codex");
+  const rejected = await statusHas("codex", "✗");
+  await page.type('input[aria-label="Token codex"]', "kunci-benar"); await clickPasang("codex");
+  const accepted = await statusHas("codex", "✓");
+  check("pemeriksaan token Codex: ditolak lalu diterima", rejected && accepted, `ditolak=${rejected} diterima=${accepted}`);
+  await page.evaluate(() => window.simply.setToken("codex", ""));
+
+  // Tombol halaman pembuatan key: hanya alamat tetap dari katalog.
+  const pages = await page.evaluate(() => Promise.all([window.simply.openTokenPage("codex"), window.simply.openTokenPage("claude"), window.simply.openTokenPage("../etc")]));
+  check("buka halaman key: Codex ya; Claude dan nama asing ditolak", pages[0].ok === true && pages[1].ok === false && pages[2].ok === false, JSON.stringify(pages));
+
   await page.click('input[aria-label="Batas biaya USD"]', { clickCount: 3 });
   await page.keyboard.type("1"); // Menyimpan menerapkan batas dari dialog; pertahankan batas uji $1.
   // Menyimpan menandai pengaturan awal selesai; tanpa itu dialog muncul lagi setiap halaman dimuat ulang.
@@ -129,8 +152,8 @@ try {
     bridgeKeys: Object.keys(window.simply ?? {}).sort(),
   }));
   check("renderer tidak punya require/process (tanpa akses Node)", surface.require === "undefined" && surface.process === "undefined", JSON.stringify(surface));
-  const expectedKeys = ["chooseWorkspace", "claudeInfo", "connection", "getSettings", "onOpenSettings", "saveSettings", "setToken"];
-  check("jembatan preload hanya menyediakan 7 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
+  const expectedKeys = ["chooseWorkspace", "claudeInfo", "connection", "getSettings", "onOpenSettings", "openTokenPage", "saveSettings", "setToken"];
+  check("jembatan preload hanya menyediakan 8 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
 
   // CSP dibuktikan lewat pelanggaran sungguhan: fetch ke luar harus ditolak oleh connect-src, bukan oleh jaringan.
   const violation = await page.evaluate(() => new Promise((res) => {
@@ -214,6 +237,22 @@ try {
   check("dengan token Claude: dropdown berisi model dari provider", opts.join() === "claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5", opts.join());
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 3000 }).catch(() => {});
+
+  // Token yang tidak dikenali (akun tidak terbaca): peringatan di dialog dan di strip info; hilang setelah token benar.
+  const dialogGone = () => page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 3000 }).catch(() => {});
+  await page.evaluate(() => window.simply.setToken("claude", "token-salah"));
+  await openSettings();
+  const warned = await page.waitForSelector('[data-testid="token-warning"]', { timeout: 5000 }).then(() => true).catch(() => false);
+  check("token tidak dikenali: dialog memberi peringatan", warned);
+  await page.keyboard.press("Escape"); await dialogGone();
+  const barWarn = await page.waitForSelector('[data-testid="token-warning-bar"]', { timeout: 5000 }).then(() => true).catch(() => false);
+  check("token tidak dikenali: strip info memberi peringatan", barWarn);
+  await page.evaluate(() => window.simply.setToken("claude", "token-uji"));
+  await openSettings();
+  await page.waitForSelector('select[aria-label="Model Dax"]', { timeout: 5000 });
+  check("token benar: peringatan hilang", (await page.$('[data-testid="token-warning"]')) === null);
+  await page.keyboard.press("Escape"); await dialogGone();
+  await page.waitForFunction(() => !document.querySelector('[data-testid="token-warning-bar"]'), { timeout: 5000 }).catch(() => {});
 
   // Ubah lewat UI: mode baca+tulis, budget USD 2.5, model Dax ke Haiku.
   await openSettings();

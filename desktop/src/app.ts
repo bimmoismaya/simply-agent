@@ -3,8 +3,9 @@ import { existsSync, mkdirSync, renameSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
-  app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, session, Tray,
+  app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, session, shell, Tray,
 } from "electron";
+import { cleanToken, shapeProblem, TOKEN_PAGES, type TokenCheck } from "../../shared/tokens.ts";
 import type { AgentStatus, SessionInfo } from "../../shared/types.ts";
 import { startServer } from "../../server/src/index.ts";
 import { defaultRunner, type Limits, type Runner } from "../../server/src/engine.ts";
@@ -13,12 +14,17 @@ import { ensurePlugins, isInstalled, PLUGINS } from "../../server/src/plugins.ts
 import { TOKEN_ENV } from "./auth.ts";
 import { agentNote, budgetNote, isBusy } from "./notify.ts";
 import { defaultWorkspace, loadSettings, PROVIDERS, saveSettings, SettingsSchema, validateWorkspace, type Settings } from "./settings.ts";
+import { validateProviderToken } from "./tokens.ts";
 import { resolveUiFile } from "./uipath.ts";
 
 export interface LaunchOptions {
   /** Untuk smoke test: ganti agent sungguhan dengan runner palsu. */
   runner?: Runner;
   limits?: Limits;
+  /** Untuk smoke test: ganti pemeriksaan API key ke penyedia (Codex, Gemini). */
+  validateToken?: (provider: string, token: string) => Promise<TokenCheck>;
+  /** Untuk smoke test: ganti pembukaan halaman di browser. */
+  openExternal?: (url: string) => void | Promise<void>;
   /** Untuk smoke test: ganti pengambilan model dan info akun dari provider. */
   claudeInfo?: () => Promise<ClaudeInfo>;
   /** Untuk smoke test: buka port DevTools protocol (hanya di localhost). Tidak pernah diisi di app biasa. */
@@ -231,20 +237,6 @@ export async function launch(opts: LaunchOptions = {}) {
     }
     return { ok: true, restart: false, pluginErrors };
   });
-
-  guarded("simply:setToken", (arg) => {
-    const a = arg as { provider?: unknown; token?: unknown } | null;
-    const provider = PROVIDERS.find((p) => p === a?.provider);
-    const t = typeof a?.token === "string" ? a.token.trim() : null;
-    if (!provider || t === null || t.length > 2000 || /\s/.test(t)) return { ok: false, error: "Token tidak valid." };
-    const next = { ...settings, tokens: { ...settings.tokens, [provider]: t } };
-    if (!t) delete next.tokens[provider];
-    saveSettings(settingsFile, next);
-    settings = next;
-    applyTokens(next);
-    return { ok: true };
-  });
-
   // Model dan identitas akun dari provider. Di-cache per token; token baru berarti ambil ulang.
   let infoCache: { key: string; info: ClaudeInfo } | null = null;
   guarded("simply:claudeInfo", async () => {
@@ -258,6 +250,49 @@ export async function launch(opts: LaunchOptions = {}) {
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
+  });
+
+  // Simpan token setelah dirapikan dan dicek bentuknya, lalu periksa ke penyedia. Hasil pemeriksaan hanya ditampilkan:
+  // token tetap tersimpan (jaringan bisa mati), tapi bentuk yang jelas salah ditolak sebelum disimpan.
+  const checkToken = async (provider: string, token: string): Promise<TokenCheck> => {
+    if (provider === "claude") {
+      try {
+        const info = await (opts.claudeInfo ?? loadClaudeInfo)();
+        infoCache = { key: token, info }; // dipakai juga oleh dialog, jadi tidak perlu memulai proses kedua
+        return info.account.email
+          ? { state: "valid", detail: `terhubung sebagai ${info.account.email}` }
+          : { state: "rejected", detail: "akun tidak terbaca (token salah atau kedaluwarsa)" };
+      } catch (e) {
+        return { state: "unknown", detail: e instanceof Error ? e.message : String(e) };
+      }
+    }
+    return (opts.validateToken ?? validateProviderToken)(provider, token);
+  };
+
+  guarded("simply:setToken", async (arg) => {
+    const a = arg as { provider?: unknown; token?: unknown } | null;
+    const provider = PROVIDERS.find((p) => p === a?.provider);
+    if (!provider || typeof a?.token !== "string") return { ok: false, error: "Token tidak valid." };
+    const problem = shapeProblem(provider, a.token);
+    if (problem) return { ok: false, error: problem };
+    const t = cleanToken(a.token);
+    if (t.length > 2000) return { ok: false, error: "Token terlalu panjang." };
+    const next = { ...settings, tokens: { ...settings.tokens, [provider]: t } };
+    if (!t) delete next.tokens[provider];
+    saveSettings(settingsFile, next);
+    settings = next;
+    applyTokens(next);
+    if (!t) return { ok: true, check: { state: "unknown", detail: "token dihapus" } as TokenCheck };
+    return { ok: true, check: await checkToken(provider, t) };
+  });
+
+  // Hanya alamat tetap dari katalog; UI mengirim nama provider, bukan URL.
+  guarded("simply:openTokenPage", (arg) => {
+    const p = (arg as { provider?: unknown } | null)?.provider;
+    const url = typeof p === "string" ? TOKEN_PAGES[p] : undefined;
+    if (!url) return { ok: false };
+    void (opts.openExternal ?? shell.openExternal)(url);
+    return { ok: true };
   });
 
   // ---- Keamanan jendela ----
