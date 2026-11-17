@@ -238,9 +238,8 @@ Target: app desktop Ubuntu dalam format `.deb`. Folder baru `desktop/`.
 
 ### Masih terbuka (urut prioritas)
 
-1. **(Anda) Merge `feat/next`** (belum ada pull request) dan pasang paket baru dengan sudo:
+1. **(Anda) Merge `feat/next`** dan pasang paket baru dengan sudo (dari root repo):
    ```
-   cd /home/nusapala/git/agent
    sudo apt install ./desktop/release/simply-agent_0.1.0_amd64.deb
    ```
    Setelah terpasang: buka app, isi token di pengaturan awal, lalu cek `sudo apt remove simply-agent`. Ini juga menguji migrasi data lama `~/.config/agent-orchestrator` (belum pernah dijalankan). `node desktop/scripts/e2e-packaged.mjs` (agent sungguhan, sekitar USD 0,02) butuh token di profil app terpasang.

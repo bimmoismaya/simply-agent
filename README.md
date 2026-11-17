@@ -80,8 +80,9 @@ Proyek ini menjalankan beberapa agent AI dengan UI kanvas. Rencana lengkap per f
 ### Menjalankan
 
 ```
-cd /home/nusapala/git/agent/server && npm start
-cd /home/nusapala/git/agent/ui && npm run dev
+# dari root repo, di dua terminal
+(cd server && npm start)
+(cd ui && npm run dev)
 ```
 
 Server mencetak URL dengan token, misalnya `http://localhost:5173/?token=3f9a...`. **Buka URL itu**, bukan `localhost:5173` polos. UI menyimpan token per tab dan menghapusnya dari address bar. Token baru dibuat setiap server start, kecuali diset lewat `SIMPLY_TOKEN`.
@@ -135,7 +136,7 @@ State disimpan di luar workspace, jadi agent tidak bisa membacanya. Agent memaka
 **Pengembangan dan tes:**
 
 ```
-cd /home/nusapala/git/agent/desktop
+cd desktop                      # dari root repo
 npm start                       # build UI + app, lalu buka jendela
 npm run smoke                   # smoke test Electron: runner palsu, tanpa biaya
 npm test                        # tes pengaturan, validasi workspace, notifikasi, path UI
