@@ -1,0 +1,59 @@
+name: build
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Tiap platform memasang binary claude miliknya sendiri lewat optionalDependencies.
+      - name: Install
+        shell: bash
+        run: |
+          for d in server ui desktop; do (cd $d && npm ci --no-audit --no-fund); done
+
+      - name: Typecheck
+        shell: bash
+        run: |
+          for d in server ui desktop; do (cd $d && npx tsc --noEmit); done
+
+      - name: Unit tests
+        shell: bash
+        run: |
+          (cd server && npm test)
+          (cd desktop && npm test)
+
+      - name: Smoke test Electron (Linux, layar virtual)
+        if: runner.os == 'Linux'
+        working-directory: desktop
+        run: xvfb-run -a npm run smoke
+
+      - name: Package
+        shell: bash
+        working-directory: desktop
+        run: |
+          node scripts/make-icon.mjs
+          npm run dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simply-agent-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            desktop/release/*.deb
+            desktop/release/*.exe
+            desktop/release/*.dmg

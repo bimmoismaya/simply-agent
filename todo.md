@@ -52,10 +52,12 @@ Isolate data access in one hook, useAgents(), which returns { agents, edges, sen
 | 6 Sisa pekerjaan | Selesai, kecuali Codex/Gemini, `claude-security`, `git init`, desain final | USD, antrean persisten, tes UI di repo |
 | 7 Fondasi Electron | Selesai (GO) | Keamanan jendela teruji |
 | 8 Integrasi desktop | Selesai | Tray, notifikasi, menu, dan dialog sistem belum dilihat langsung |
-| 9 Paket `.deb` | **Dibangun, menunggu pasang dengan sudo** | Lolos pemeriksaan statis dan simulasi apt |
+| 9 Paket `.deb` | **Dibangun ulang, menunggu pasang dengan sudo** | Lolos pemeriksaan statis dan simulasi apt |
 | 10 Uji akhir dan dokumentasi | Selesai, kecuali AppImage (opsional) | Build dari nol satu perintah |
+| 11 Token, plugin, nama, tema | Selesai | Plugin terbukti jalan di SDK |
+| 12 Cross-OS | **Sebagian** | Kode dan CI siap; Windows/macOS belum pernah jalan |
 
-Angka tes terakhir: server 22, desktop 9, smoke Electron 54 cek, smoke web lulus. Semua typecheck bersih.
+Angka tes terakhir: server 25, desktop 9, smoke Electron lulus semua, smoke web lulus. Semua typecheck bersih.
 
 Daftar pekerjaan yang masih terbuka ada di bagian paling bawah.
 
@@ -208,23 +210,34 @@ Target: app desktop Ubuntu dalam format `.deb`. Folder baru `desktop/`.
 - Selesai bila: build `.deb` dari nol memakai satu perintah, dan semua tes (server, UI, desktop) lulus
 - Hasil: `bash scripts/build-deb.sh` di salinan repo bersih (tanpa node_modules) menghasilkan `.deb` 229 MB dalam 1,5 menit.
 
+### Fase 11: Token provider, plugin, nama, dan tema (selesai)
+- [x] Token provider diisi manual di Pengaturan (claude, codex, gemini); tanpa token agent provider itu gagal dengan pesan jelas. Token tidak dikirim balik ke UI.
+- [x] Halaman utama menampilkan AI (provider/model) dan folder kerja.
+- [x] Ganti nama jadi Simply Agent; `orchestrator` jadi `engine` di seluruh kode. Data lama `~/.config/agent-orchestrator` dipindah otomatis (belum diuji di app sungguhan).
+- [x] Tema cyan dan ikon geometris per peran (menggantikan merah dan robot piksel).
+- [x] Pilihan plugin agent: katalog tetap 8 plugin, dipin ke commit, diunduh otomatis dan dicek sebelum tiap giliran agent. Terbukti dengan panggilan nyata: plugin, skill, dan hook caveman/ponytail dimuat SDK. Pengaturan awal terbuka otomatis sampai disimpan.
+- [x] Dipush ke GitHub (`main`), branch `feat/cross-platform`.
+
+### Fase 12: Cross-OS (branch `feat/cross-platform`)
+- [x] Binary `claude` dicari per platform (`claude-agent-sdk-<platform>-<arch>`, `claude` atau `claude.exe`).
+- [x] Target build: `deb` (Linux), `nsis` (Windows), `dmg` (macOS) lewat `desktop/scripts/dist.mjs`. Ikon PNG 512 dikonversi electron-builder.
+- [x] Workflow CI `.github/workflows/build.yml`: typecheck, tes, smoke (Linux), paket, artefak untuk tiga OS.
+- [ ] Hasil CI di Windows dan macOS (belum pernah dijalankan; tes desktop yang memakai path POSIX mungkin gagal di Windows).
+- [ ] Sandbox Bash di Windows tidak diketahui; Bash gagal-tertutup kalau tidak ada. Windows butuh Git for Windows.
+
 ### Masih terbuka (urut prioritas)
 
-1. **(Anda) Pasang paket dengan sudo**, lalu saya selesaikan verifikasi Fase 9:
+1. **(Anda) Pasang paket dengan sudo** (butuh password, tidak bisa dari sesi AI):
    ```
    cd /home/nusapala/git/agent
    sudo apt install ./desktop/release/simply-agent_0.1.0_amd64.deb
    ```
-   Setelah Anda kabari, saya jalankan e2e app terpasang (sekitar USD 0,07), cek profil AppArmor `/etc/apparmor.d/simply-agent`, entri menu, dan uji `sudo apt remove` tanpa sisa. Hasil sandbox Bash dibandingkan dengan data pembanding di Fase 9.
-2. **(Anda) Lihat langsung** hal yang tidak bisa diuji tanpa tampilan desktop: ikon tray (klik, menu), notifikasi desktop saat agent selesai dengan jendela tidak difokuskan, menu aplikasi (Ctrl+, untuk Pengaturan), dialog pilih folder workspace, dan dialog konfirmasi saat menutup jendela dengan agent berjalan. Kabari yang tidak sesuai.
-3. **Putuskan dan jalankan `claude-security`**: scan memakai beberapa agent Opus, jadi biayanya jauh lebih besar dari uji biasa. Hasilnya ditangani di Fase 4 dan 5e.
-4. **(Anda) Pasang dan login CLI `codex` dan `gemini`**, lalu saya uji adapter, sesuaikan argumen CLI, dan jalankan satu agent non-Claude bersama agent Claude (Fase 4, 5d, 6a).
-5. **Opsional: membuat Bash bisa dipakai di app.** Pilihan: profil AppArmor untuk `bwrap` yang dipasang `postinst` (butuh root saat instalasi, jadi masuk akal di `.deb`), atau menjalankan server di container. Sampai itu dilakukan, mode baca+tulis hanya memberi Edit dan Write.
-6. **Opsional lain:**
-   - Desain UI final dari alat lain (tetap lewat `useAgents()`), jika Anda tidak puas dengan tampilan sekarang.
-   - Target AppImage untuk distro lain (berat karena binary `claude` 366 MB).
-   - Ukur performa kanvas dengan puluhan node.
-   - `git init` dan commit pertama (keputusan: lokal dulu).
+   Paket sudah dibangun ulang dengan nama, tema, token, dan plugin baru. Simulasi `apt-get -s` bersih. Setelah terpasang: jalankan `simply-agent`, isi token di pengaturan awal, lalu cek `sudo apt remove simply-agent`.
+2. **Hasil CI Windows dan macOS**, lalu perbaiki yang gagal.
+3. **Codex dan Gemini**: CLI belum terpasang dan Anda tidak punya akunnya. Adapter `server/src/providers/cli.ts` belum pernah diuji. Sementara itu agent non-Claude tidak bisa diverifikasi.
+4. **Tidak dikerjakan (keputusan Anda):** review `claude-security`, koreksi visual.
+5. **Diverifikasi lewat D-Bus di sesi GNOME ini:** tray terdaftar (StatusNotifierItem), notifikasi sampai ke GNOME saat jendela tidak fokus dan tidak muncul saat fokus, menu Ctrl+, membuka Pengaturan, dialog pilih folder dipanggil dengan opsi benar. **Belum dilihat langsung:** tampilan asli dialog sistem, ikon tray, dan dialog konfirmasi tutup.
+6. **Opsional (belum dikerjakan):** Bash di Linux lewat profil AppArmor/container, ukur performa puluhan node, lisensi, tombol "Hubungkan Claude" yang menjalankan `claude setup-token` dari app.
 
 ### Catatan penting
 - Pause hanya menahan antrean; giliran yang sedang jalan tetap selesai (keputusan Anda, lihat 5b).

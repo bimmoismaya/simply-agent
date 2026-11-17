@@ -71,8 +71,10 @@ function serveUi(uiDir: string) {
  */
 function pointToBundledClaude() {
   if (!app.isPackaged || process.env.CLAUDE_CODE_EXECUTABLE) return;
-  const bin = join(process.resourcesPath, "app.asar.unpacked", "node_modules", "@anthropic-ai", `claude-agent-sdk-linux-${process.arch}`, "claude");
-  if (!existsSync(bin)) throw new Error(`binary claude tidak ada di paket: ${bin}`);
+  const dir = join(process.resourcesPath, "app.asar.unpacked", "node_modules", "@anthropic-ai", `claude-agent-sdk-${process.platform}-${process.arch}`);
+  // Windows memakai claude.exe; nama lain dicoba dulu supaya tidak bergantung pada satu ejaan.
+  const bin = ["claude", "claude.exe"].map((n) => join(dir, n)).find((f) => existsSync(f));
+  if (!bin) throw new Error(`binary claude tidak ada di paket: ${dir}`);
   process.env.CLAUDE_CODE_EXECUTABLE = bin;
 }
 

@@ -10,8 +10,8 @@
     "smoke": "npm run build && node scripts/smoke.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test src/*.test.ts",
-    "pack": "npm run build && electron-builder --linux --dir",
-    "dist": "npm run build && electron-builder --linux deb"
+    "pack": "npm run build && node scripts/dist.mjs --dir",
+    "dist": "npm run build && node scripts/dist.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.325",
@@ -46,7 +46,7 @@
     ],
     "asar": true,
     "asarUnpack": [
-      "node_modules/@anthropic-ai/claude-agent-sdk-linux-*/**"
+      "node_modules/@anthropic-ai/claude-agent-sdk-*/**"
     ],
     "linux": {
       "target": "deb",
@@ -68,6 +68,22 @@
     "deb": {
       "priority": "optional",
       "packageCategory": "devel"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png",
+      "artifactName": "Simply-Agent-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Simply Agent"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.png",
+      "category": "public.app-category.developer-tools",
+      "artifactName": "Simply-Agent-${version}-mac-${arch}.${ext}"
     }
   },
   "desktopName": "simply-agent.desktop"
