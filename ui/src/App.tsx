@@ -32,7 +32,7 @@ function Canvas() {
   const [workspace, setWorkspace] = useState<string>();
   const [account, setAccount] = useState<AccountSummary>();
   const [nickname, setNickname] = useState("");
-  // Di app desktop agent baru ditampilkan setelah token Claude terpasang. null = belum diketahui (dianggap belum).
+  // Di app desktop agent baru ditampilkan setelah token terpasang. null = belum diketahui (dianggap belum).
   const [hasToken, setHasToken] = useState<boolean | null>(null);
   const locked = desktop && hasToken !== true;
   const agents = locked ? [] : allAgents;
@@ -136,9 +136,9 @@ function Canvas() {
           </ReactFlow>
           {desktop && auth?.loggedIn === false && (
             <div role="alert" data-testid="auth-banner" className="absolute inset-x-0 top-3 z-20 mx-auto w-[min(620px,calc(100%-2rem))] border border-amber-400/70 bg-panel p-4 text-xs leading-5">
-              <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-amber-300">token claude belum diisi</p>
-              Agent tidak bisa jalan sebelum token diisi. Jalankan <code className="text-zinc-100">claude setup-token</code> di terminal,
-              lalu tempel hasilnya di Pengaturan, bagian token provider.
+              <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-amber-300">token belum diisi</p>
+              Agent tidak bisa jalan sebelum token diisi. Buka Pengaturan dan isi token di bagian token provider;
+              petunjuk cara mendapatkan token ada di sana.
               <div className="mt-2">
                 <button onClick={() => setSettingsOpen(true)}
                   className="mr-2 border border-amber-400/60 px-3 py-1 text-[11px] uppercase tracking-widest text-amber-200 outline-none hover:bg-amber-400/10 focus-visible:ring-1 focus-visible:ring-amber-300">
@@ -162,7 +162,7 @@ function Canvas() {
             <div data-testid="no-agents" className="absolute inset-0 z-10 flex items-center justify-center p-6 text-center">
               <div className="max-w-sm border border-signal/30 bg-panel/90 p-5 text-xs leading-5 text-dim">
                 <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-zinc-100">belum ada agent</p>
-                Agent muncul setelah token Claude terpasang.
+                Agent muncul setelah token terpasang.
                 <div className="mt-3">
                   <button onClick={() => setSettingsOpen(true)}
                     className="border border-signal/50 px-3 py-1 text-[11px] uppercase tracking-widest text-cyan-100 outline-none hover:bg-signal/15 focus-visible:ring-1 focus-visible:ring-signal">

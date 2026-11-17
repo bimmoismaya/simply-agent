@@ -1,5 +1,5 @@
 export interface AuthStatus {
-  /** false = token belum diisi, agent Claude diblokir. */
+  /** false = token belum diisi, agent diblokir. */
   loggedIn: boolean | null;
   method?: string;
   detail: string;
@@ -11,6 +11,6 @@ export const TOKEN_ENV = { claude: "CLAUDE_CODE_OAUTH_TOKEN", codex: "OPENAI_API
 /** Token wajib diisi manual. Isinya tidak divalidasi ke server Claude; token salah baru ketahuan saat agent jalan. */
 export function tokenStatus(token: string): AuthStatus {
   return token
-    ? { loggedIn: true, method: "token", detail: "Token Claude terisi." }
-    : { loggedIn: false, detail: "Token Claude belum diisi." };
+    ? { loggedIn: true, method: "token", detail: "Token terisi." }
+    : { loggedIn: false, detail: "Token belum diisi." };
 }

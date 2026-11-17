@@ -252,7 +252,7 @@ export async function launch(opts: LaunchOptions = {}) {
   let infoCache: { key: string; info: ClaudeInfo } | null = null;
   guarded("simply:claudeInfo", async () => {
     const key = settings.tokens.claude ?? "";
-    if (!key) return { ok: false, error: "Token Claude belum diisi." };
+    if (!key) return { ok: false, error: "Token belum diisi." };
     if (infoCache?.key === key) return { ok: true, ...infoCache.info };
     try {
       const info = await (opts.claudeInfo ?? loadClaudeInfo)();

@@ -24,7 +24,7 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
     return () => { alive = false; };
   }, []);
   useEffect(() => { if (draft) firstRef.current?.focus(); }, [draft === null]);
-  // Daftar model hanya diambil setelah token Claude terisi, dan diambil ulang saat token diganti.
+  // Daftar model hanya diambil setelah token terisi, dan diambil ulang saat token diganti.
   const hasClaude = !!info?.tokenSet.claude;
   const [tokenRev, setTokenRev] = useState(0);
   useEffect(() => {
@@ -199,7 +199,7 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
         <section>
           <h3 className="mb-1 font-display text-[12px] uppercase tracking-[0.25em] text-signal">model per agent</h3>
           {!hasClaude ? (
-            <p data-testid="models-hint" className="text-[10px] text-amber-300">Isi token Claude di bagian token provider dulu. Setelah itu daftar model dan pilihan per agent muncul di sini, diambil dari akun Anda.</p>
+            <p data-testid="models-hint" className="text-[10px] text-amber-300">Isi token dulu di bagian token provider. Setelah itu daftar model dan pilihan per agent muncul di sini, diambil dari akun Anda.</p>
           ) : models === null && !modelsError ? (
             <p role="status" className="text-[10px] text-dim">Mengambil daftar model dari akun Claude…</p>
           ) : (
