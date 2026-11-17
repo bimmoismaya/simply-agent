@@ -95,7 +95,7 @@ function Canvas() {
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar agents={agents} session={session} connection={connection} lastError={lastError} workspace={workspace} account={account} nickname={nickname} onSettings={desktop ? () => setSettingsOpen(true) : undefined} />
+      <TopBar agents={agents} session={session} connection={connection} lastError={lastError} workspace={workspace} account={account} nickname={nickname} tokenWarning={hasToken === true && !!account && !account.email} onSettings={desktop ? () => setSettingsOpen(true) : undefined} />
       <div className="flex min-h-0 flex-1">
         <Sidebar agents={ordered} selectedId={selectedId} onSelect={select} />
         <main className="vignette relative flex-1">

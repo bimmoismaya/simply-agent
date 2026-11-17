@@ -215,6 +215,22 @@ try {
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 3000 }).catch(() => {});
 
+  // Token yang tidak dikenali (akun tidak terbaca): peringatan di dialog dan di strip info; hilang setelah token benar.
+  const dialogGone = () => page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 3000 }).catch(() => {});
+  await page.evaluate(() => window.simply.setToken("claude", "token-salah"));
+  await openSettings();
+  const warned = await page.waitForSelector('[data-testid="token-warning"]', { timeout: 5000 }).then(() => true).catch(() => false);
+  check("token tidak dikenali: dialog memberi peringatan", warned);
+  await page.keyboard.press("Escape"); await dialogGone();
+  const barWarn = await page.waitForSelector('[data-testid="token-warning-bar"]', { timeout: 5000 }).then(() => true).catch(() => false);
+  check("token tidak dikenali: strip info memberi peringatan", barWarn);
+  await page.evaluate(() => window.simply.setToken("claude", "token-uji"));
+  await openSettings();
+  await page.waitForSelector('select[aria-label="Model Dax"]', { timeout: 5000 });
+  check("token benar: peringatan hilang", (await page.$('[data-testid="token-warning"]')) === null);
+  await page.keyboard.press("Escape"); await dialogGone();
+  await page.waitForFunction(() => !document.querySelector('[data-testid="token-warning-bar"]'), { timeout: 5000 }).catch(() => {});
+
   // Ubah lewat UI: mode baca+tulis, budget USD 2.5, model Dax ke Haiku.
   await openSettings();
   // Dialog tampil dulu dengan "Memuat pengaturan…"; tunggu isinya (radio) sebelum mengklik.

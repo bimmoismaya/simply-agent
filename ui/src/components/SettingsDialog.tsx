@@ -14,6 +14,8 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
   // Daftar model dari akun provider: null = belum/sedang diambil.
   const [models, setModels] = useState<{ value: string; name: string }[] | null>(null);
   const [modelsError, setModelsError] = useState<string | null>(null);
+  // Akun dari token Claude; email kosong setelah daftar dimuat = token tidak dikenali.
+  const [account, setAccount] = useState<{ email?: string } | null>(null);
   const [restarting, setRestarting] = useState(false);
   const firstRef = useRef<HTMLButtonElement>(null);
 
@@ -28,10 +30,10 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
   const hasClaude = !!info?.tokenSet.claude;
   const [tokenRev, setTokenRev] = useState(0);
   useEffect(() => {
-    if (!hasClaude) { setModels(null); setModelsError(null); return; }
+    if (!hasClaude) { setModels(null); setModelsError(null); setAccount(null); return; }
     let alive = true;
-    setModels(null); setModelsError(null);
-    window.simply?.claudeInfo().then((r) => { if (!alive) return; if (r.ok) setModels(r.models); else setModelsError(r.error); })
+    setModels(null); setModelsError(null); setAccount(null);
+    window.simply?.claudeInfo().then((r) => { if (!alive) return; if (r.ok) { setModels(r.models); setAccount(r.account); } else setModelsError(r.error); })
       .catch((e) => alive && setModelsError(String(e)));
     return () => { alive = false; };
   }, [hasClaude, tokenRev]);
@@ -134,7 +136,7 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
         <section>
           <h3 className="mb-1 font-display text-[12px] uppercase tracking-[0.25em] text-signal">token provider</h3>
           <p className="mb-2 text-[10px] text-dim">
-            Wajib untuk tiap provider yang dipakai agent. Claude: jalankan <code className="text-zinc-100">claude setup-token</code> lalu tempel hasilnya.
+            Wajib untuk tiap provider yang dipakai agent. Claude: jalankan <code className="text-zinc-100">claude setup-token</code>, login di browser, tempel kode dari browser ke terminal, lalu tempel token yang dicetak terminal di sini.
             Codex: API key OpenAI. Gemini: API key Gemini. Token disimpan di komputer ini dan tidak ditampilkan lagi. Kosongkan lalu klik pasang untuk menghapus.
           </p>
           <div className="grid grid-cols-[70px_1fr_auto] items-center gap-x-2 gap-y-1">
@@ -147,6 +149,12 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
               </label>
             ))}
           </div>
+          {hasClaude && models !== null && !account?.email && (
+            <p role="alert" data-testid="token-warning" className="mt-2 border border-amber-400/40 px-2 py-1 text-[10px] text-amber-300">
+              Token Claude tidak dikenali (akun tidak terbaca). Pastikan yang ditempel adalah token yang dicetak terminal oleh <code className="text-zinc-100">claude setup-token</code>,
+              bukan kode dari halaman browser. Tempel ulang lalu klik pasang.
+            </p>
+          )}
         </section>
 
         <section>

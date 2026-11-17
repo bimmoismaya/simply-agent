@@ -17,7 +17,7 @@ function elapsed(from: number, now: number) {
   return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
 }
 
-export function TopBar({ agents, session, connection, lastError, workspace, account, nickname, onSettings }: {
+export function TopBar({ agents, session, connection, lastError, workspace, account, nickname, tokenWarning, onSettings }: {
   agents: Agent[];
   session: SessionInfo | null;
   connection: Connection;
@@ -26,6 +26,8 @@ export function TopBar({ agents, session, connection, lastError, workspace, acco
   workspace?: string;
   /** Akun Claude yang terhubung dengan token; hanya diketahui di app desktop setelah token diisi. */
   account?: AccountSummary;
+  /** Token terpasang tapi akunnya tidak terbaca (token salah atau kedaluwarsa). */
+  tokenWarning?: boolean;
   /** Nama panggilan dari Pengaturan; kosong = tanpa sapaan. */
   nickname?: string;
   /** Hanya ada di app desktop. */
@@ -97,11 +99,12 @@ export function TopBar({ agents, session, connection, lastError, workspace, acco
           folder <span className="text-zinc-100" data-testid="info-workspace">{workspace}</span>
         </span>
       )}
-      {(account?.email || nickname) && (
+      {(account?.email || nickname || tokenWarning) && (
         <span className="ml-auto shrink-0" data-testid="info-account" title="Akun Claude yang terhubung dengan token">
           {nickname && <span>Halo, <span className="text-signal">{nickname}</span></span>}
           {nickname && account?.email && " · "}
           {account?.email && <>akun <span className="text-zinc-100">{account.email}</span></>}
+          {tokenWarning && <span data-testid="token-warning-bar" className="text-amber-300">{nickname ? " · " : ""}token tidak dikenali, cek Pengaturan</span>}
           {account?.organization && <span> · {account.organization}</span>}
           {account?.plan && <span> · {account.plan}</span>}
         </span>

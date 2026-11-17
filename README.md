@@ -32,7 +32,7 @@ Build Windows dan macOS lulus di CI, tapi app-nya belum pernah dicoba di sana.
 
 Token ditempel di **⚙ pengaturan → token provider → pasang**. Disimpan hanya di komputer ini (`settings.json`, izin 0600) dan tidak ditampilkan lagi. Jangan dibagikan; kalau bocor, cabut dari akun penyedianya.
 
-- **Claude** (butuh langganan Claude): di terminal jalankan `claude setup-token`, selesaikan login di browser, lalu salin token panjang yang dicetak. Yang diterima kolom ini adalah token dari perintah itu, bukan API key Anthropic. Belum punya `claude` di terminal? Di Linux, app ini membawa binary-nya: `/opt/simply-agent/resources/app.asar.unpacked/node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude setup-token`. Di Windows dan macOS, pasang Claude Code dulu.
+- **Claude** (butuh langganan Claude): di terminal jalankan `claude setup-token` dan login di browser. Halaman browser lalu menampilkan **"Authentication code"**: kode itu ditempel kembali **ke terminal**, bukan ke app. Setelah itu terminal mencetak token panjang; token itulah yang ditempel di app. Kolom ini tidak menerima kode dari browser maupun API key Anthropic; kalau salah, app menampilkan peringatan "token tidak dikenali". Belum punya `claude` di terminal? Di Linux, app ini membawa binary-nya: `/opt/simply-agent/resources/app.asar.unpacked/node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude setup-token`. Di Windows dan macOS, pasang Claude Code dulu.
 - **Codex:** buat API key OpenAI di <https://platform.openai.com/api-keys>.
 - **Gemini:** buat API key di Google AI Studio, <https://aistudio.google.com/apikey>.
 
