@@ -55,7 +55,7 @@ Isolate data access in one hook, useAgents(), which returns { agents, edges, sen
 | 9 Paket `.deb` | **Dibangun ulang, menunggu pasang dengan sudo** | Lolos pemeriksaan statis dan simulasi apt |
 | 10 Uji akhir dan dokumentasi | Selesai, kecuali AppImage (opsional) | Build dari nol satu perintah |
 | 11 Token, plugin, nama, tema | Selesai | Plugin terbukti jalan di SDK |
-| 12 Cross-OS | **Sebagian** | Kode dan CI siap; Windows/macOS belum pernah jalan |
+| 12 Cross-OS | **Sebagian** | CI hijau di 3 OS; app belum dicoba di Windows/macOS |
 
 Angka tes terakhir: server 25, desktop 9, smoke Electron lulus semua, smoke web lulus. Semua typecheck bersih.
 
@@ -222,7 +222,8 @@ Target: app desktop Ubuntu dalam format `.deb`. Folder baru `desktop/`.
 - [x] Binary `claude` dicari per platform (`claude-agent-sdk-<platform>-<arch>`, `claude` atau `claude.exe`).
 - [x] Target build: `deb` (Linux), `nsis` (Windows), `dmg` (macOS) lewat `desktop/scripts/dist.mjs`. Ikon PNG 512 dikonversi electron-builder.
 - [x] Workflow CI `.github/workflows/build.yml`: typecheck, tes, smoke (Linux), paket, artefak untuk tiga OS.
-- [ ] Hasil CI di Windows dan macOS (belum pernah dijalankan; tes desktop yang memakai path POSIX mungkin gagal di Windows).
+- [x] CI hijau di Linux, Windows, dan macOS (typecheck, tes unit, paket). Ketemu dan diperbaiki: `validateWorkspace` meloloskan `C:\` di Windows, tes berasumsi path POSIX, Electron di runner Linux butuh `--no-sandbox`.
+- [ ] Smoke Electron di Windows dan macOS, dan mencoba app sungguhan di sana (belum pernah).
 - [ ] Sandbox Bash di Windows tidak diketahui; Bash gagal-tertutup kalau tidak ada. Windows butuh Git for Windows.
 
 ### Masih terbuka (urut prioritas)
@@ -233,7 +234,7 @@ Target: app desktop Ubuntu dalam format `.deb`. Folder baru `desktop/`.
    sudo apt install ./desktop/release/simply-agent_0.1.0_amd64.deb
    ```
    Paket sudah dibangun ulang dengan nama, tema, token, dan plugin baru. Simulasi `apt-get -s` bersih. Setelah terpasang: jalankan `simply-agent`, isi token di pengaturan awal, lalu cek `sudo apt remove simply-agent`.
-2. **Hasil CI Windows dan macOS**, lalu perbaiki yang gagal.
+2. **Coba app di Windows dan macOS** (artefak `.exe` dan `.dmg` ada di tab Actions). CI hanya membuktikan build dan tes unit; smoke Electron hanya di Linux.
 3. **Codex dan Gemini**: CLI belum terpasang dan Anda tidak punya akunnya. Adapter `server/src/providers/cli.ts` belum pernah diuji. Sementara itu agent non-Claude tidak bisa diverifikasi.
 4. **Tidak dikerjakan (keputusan Anda):** review `claude-security`, koreksi visual.
 5. **Diverifikasi lewat D-Bus di sesi GNOME ini:** tray terdaftar (StatusNotifierItem), notifikasi sampai ke GNOME saat jendela tidak fokus dan tidak muncul saat fokus, menu Ctrl+, membuka Pengaturan, dialog pilih folder dipanggil dengan opsi benar. **Belum dilihat langsung:** tampilan asli dialog sistem, ikon tray, dan dialog konfirmasi tutup.
