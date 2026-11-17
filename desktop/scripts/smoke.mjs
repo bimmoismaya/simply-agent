@@ -78,7 +78,7 @@ try {
   mkdirSync(OUT, { recursive: true });
 
   // =============== Fase A: sesi pertama ===============
-  app1 = spawnApp({ SIMPLY_FAKE_AUTH: "out" }, PORT);
+  app1 = spawnApp({}, PORT);
   const s1 = await attach(app1, PORT);
   b1 = s1.browser;
   const { page, errors } = s1;
@@ -91,21 +91,26 @@ try {
   check("profil baru membuka pengaturan awal", firstRun);
   const pluginBoxes = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] input[type="checkbox"]')].length);
   check("pengaturan awal menampilkan 8 plugin dan opsi notifikasi", pluginBoxes === 9, String(pluginBoxes));
+  // Tanpa token Claude: bagian model hanya petunjuk, belum ada daftar agent.
+  const hint = await page.$('[data-testid="models-hint"]').then(Boolean);
+  const modelSelects = await page.$$eval('select[aria-label^="Model "]', (e) => e.length);
+  check("tanpa token Claude: model per agent hanya petunjuk", hint && modelSelects === 0, `hint=${hint} select=${modelSelects}`);
+  const navBefore = await page.$$eval("nav button", (e) => e.length);
+  const emptyCard = await page.$('[data-testid="no-agents"]').then(Boolean);
+  check("tanpa token: agent tidak ditampilkan, ada petunjuk", emptyCard && navBefore === 0, `kartu=${emptyCard} sidebar=${navBefore}`);
+  // Pasang token Claude lewat UI, seperti pengguna sungguhan.
+  await page.type('input[aria-label="Token claude"]', "token-uji");
+  await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^pasang$/i.test(b.textContent.trim())).click());
+  await page.waitForSelector('select[aria-label="Model Dax"]', { timeout: 5000 });
   await page.click('input[aria-label="Batas biaya USD"]', { clickCount: 3 });
   await page.keyboard.type("1"); // Menyimpan menerapkan batas dari dialog; pertahankan batas uji $1.
   // Menyimpan menandai pengaturan awal selesai; tanpa itu dialog muncul lagi setiap halaman dimuat ulang.
   await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^simpan$/i.test(b.textContent.trim())).click());
   await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 5000 }).catch(() => {});
+  const shown = await page.waitForFunction(() => document.querySelectorAll("nav button").length === 8 && !document.querySelector('[data-testid="no-agents"]'), { timeout: 5000 }).then(() => true).catch(() => false);
+  check("setelah token terpasang: 8 agent tampil", shown);
   check("simpan menutup pengaturan awal dan menandainya selesai", !(await dialogOpen(page)) && JSON.parse(readFileSync(join(PROFILE, "settings.json"), "utf8")).setupDone === true);
 
-  // Banner login: cek pertama "belum login", tombol Cek ulang menghilangkannya.
-  const banner = await page.waitForSelector('[data-testid="auth-banner"]', { timeout: 5000 }).then(() => true).catch(() => false);
-  check("banner 'belum login ke Claude' tampil", banner);
-  if (banner) {
-    await page.evaluate(() => [...document.querySelectorAll('[data-testid="auth-banner"] button')].find((b) => /cek ulang/i.test(b.textContent)).click());
-    const gone = await page.waitForFunction(() => !document.querySelector('[data-testid="auth-banner"]'), { timeout: 5000 }).then(() => true).catch(() => false);
-    check("Cek ulang menghilangkan banner setelah login", gone);
-  }
 
   // Muat ulang dari dalam halaman (page.reload milik Puppeteer terputus oleh protokol app://),
   // supaya listener error menangkap start UI.
@@ -124,8 +129,8 @@ try {
     bridgeKeys: Object.keys(window.simply ?? {}).sort(),
   }));
   check("renderer tidak punya require/process (tanpa akses Node)", surface.require === "undefined" && surface.process === "undefined", JSON.stringify(surface));
-  const expectedKeys = ["authStatus", "chooseWorkspace", "connection", "getSettings", "onOpenSettings", "saveSettings", "setToken"];
-  check("jembatan preload hanya menyediakan 6 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
+  const expectedKeys = ["chooseWorkspace", "claudeInfo", "connection", "getSettings", "onOpenSettings", "saveSettings", "setToken"];
+  check("jembatan preload hanya menyediakan 7 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
 
   // CSP dibuktikan lewat pelanggaran sungguhan: fetch ke luar harus ditolak oleh connect-src, bukan oleh jaringan.
   const violation = await page.evaluate(() => new Promise((res) => {
@@ -181,7 +186,7 @@ try {
   await sleep(200);
   const openSettings = () => page.evaluate(() => document.querySelector('button[aria-label="Pengaturan"]').click());
   await openSettings();
-  await page.waitForSelector('[role="dialog"]', { timeout: 5000 });
+  await page.waitForSelector('[data-testid="workspace-path"]', { timeout: 5000 }); // isi dialog, bukan hanya kerangkanya
   const wsShown = await page.$eval('[data-testid="workspace-path"]', (e) => e.textContent);
   check("dialog Pengaturan menampilkan workspace", wsShown === WORKSPACE, wsShown);
   const dialogText = await page.$eval('[role="dialog"]', (e) => e.textContent);
@@ -201,9 +206,19 @@ try {
   const unchanged = await page.evaluate(() => window.simply.getSettings());
   check("pengaturan tidak berubah setelah simpan ditolak", JSON.stringify(unchanged.settings) === JSON.stringify(cur.settings));
 
+  // Setelah token Claude diisi, dropdown berisi model dari provider (di smoke: daftar palsu).
+  await page.evaluate(() => window.simply.setToken("claude", "token-uji"));
+  await openSettings();
+  await page.waitForSelector('select[aria-label="Model Dax"]', { timeout: 5000 });
+  const opts = await page.$$eval('select[aria-label="Model Dax"] option', (o) => o.map((x) => x.value));
+  check("dengan token Claude: dropdown berisi model dari provider", opts.join() === "claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5", opts.join());
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 3000 }).catch(() => {});
+
   // Ubah lewat UI: mode baca+tulis, budget USD 2.5, model Dax ke Haiku.
   await openSettings();
-  await page.waitForSelector('[role="dialog"]');
+  // Dialog tampil dulu dengan "Memuat pengaturan…"; tunggu isinya (radio) sebelum mengklik.
+  await page.waitForSelector('input[name="toolMode"]');
   await page.evaluate(() => [...document.querySelectorAll('input[name="toolMode"]')][1].click());
   const warn = await page.waitForSelector('[role="note"]', { timeout: 3000 }).then(() => true).catch(() => false);
   check("mode baca+tulis menampilkan peringatan sandbox", warn);
@@ -211,6 +226,7 @@ try {
   await page.keyboard.down("Control"); await page.keyboard.press("a"); await page.keyboard.up("Control");
   await page.keyboard.type("2.5");
   await page.select('select[aria-label="Model Dax"]', "claude-haiku-5-5");
+  await page.type('input[aria-label="Nama panggilan"]', "Uji");
   await page.screenshot({ path: join(OUT, "4-pengaturan.png") });
   await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => /simpan/i.test(b.textContent)).click());
   await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 5000 });
@@ -220,11 +236,14 @@ try {
   const daxRow = await page.evaluate(() => [...document.querySelectorAll("nav button")].find((b) => b.textContent.includes("Dax")).textContent);
   check("model Dax berubah ke Haiku di sidebar", daxRow.includes("claude-haiku-5-5"), daxRow);
   const saved = JSON.parse(readFileSync(join(PROFILE, "settings.json"), "utf8"));
+  check("sapaan nama panggilan tampil di halaman utama", (await page.evaluate(() => document.querySelector('[data-testid="info-account"]')?.textContent ?? "")).includes("Halo, Uji"));
   check("pengaturan tersimpan di folder data pengguna", saved.toolMode === "all" && saved.budgetUsd === 2.5 && saved.models.dax === "claude-haiku-5-5", JSON.stringify(saved).slice(0, 120));
   check("state engine ada di folder data pengguna", existsSync(join(PROFILE, "state", "state.json")));
   check("tidak ada state di dalam workspace agent", !existsSync(join(WORKSPACE, ".engine")));
 
   const infoBar = await page.evaluate(() => document.querySelector('[data-testid="info-bar"]')?.textContent ?? "");
+  const acct = await page.evaluate(() => document.querySelector('[data-testid="info-account"]')?.textContent ?? "");
+  check("halaman utama menampilkan akun yang terhubung dengan token", acct.includes("uji@contoh.test") && acct.includes("Org Uji") && acct.includes("max"), acct);
   check("halaman utama menampilkan AI dan folder", infoBar.includes("claude") && infoBar.includes(WORKSPACE), infoBar.slice(0, 120));
 
   // Plugin: id di luar katalog dibuang, tidak pernah dipakai sebagai URL atau path.

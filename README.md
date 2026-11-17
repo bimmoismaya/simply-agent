@@ -1,6 +1,32 @@
 # Simply Agent
 
-Multi-agent dengan UI kanvas node bergaya "mission control". Rencana dan prompt UI ada di [todo.md](todo.md).
+Multi-agent dengan UI kanvas node bergaya "mission control". Rencana dan prompt UI ada di [todo.md](todo.md). Lisensi: [MIT](LICENSE).
+
+## Cara pasang
+
+Paket dibangun GitHub Actions untuk tiga sistem operasi. Unduh dari tab **Actions** di repo: buka run terbaru yang hijau, lalu bagian **Artifacts** (butuh login GitHub). Belum ada rilis resmi.
+
+**Linux (Ubuntu/Debian, x64)**
+
+```bash
+sudo apt install ./simply-agent_0.1.0_amd64.deb
+simply-agent                  # atau cari "Simply Agent" di menu aplikasi
+sudo apt remove simply-agent  # hapus app (data pengguna tetap)
+```
+
+Atau bangun sendiri dari repo ini dengan `bash scripts/build-deb.sh`; hasilnya ada di `desktop/release/`.
+
+**Windows (x64)**
+
+Jalankan `Simply-Agent-<versi>-win-x64.exe` dan ikuti installer. Pasang juga [Git for Windows](https://git-scm.com/download/win) (dipakai agent dan untuk mengunduh plugin). Installer belum ditandatangani, jadi SmartScreen bisa memperingatkan: klik **More info**, lalu **Run anyway**.
+
+**macOS**
+
+Buka `Simply-Agent-<versi>-mac-<arsitektur>.dmg` lalu seret app ke folder Applications. App belum ditandatangani, jadi saat pertama dibuka klik kanan app dan pilih **Buka**.
+
+Build Windows dan macOS lulus di CI, tapi app-nya belum pernah dicoba di sana.
+
+**Pertama kali dibuka:** dialog pengaturan awal muncul. Pilih plugin, isi token provider, lalu simpan (rinciannya di bagian [App desktop](#app-desktop-electron)). Data pengguna disimpan di `~/.config/simply-agent/` (Linux), `%APPDATA%\simply-agent\` (Windows), atau `~/Library/Application Support/simply-agent/` (macOS).
 
 ## WAJIB: setup plugin sebelum mengerjakan tugas apa pun
 
@@ -21,49 +47,7 @@ Kalau repo ini dibuka di laptop/mesin baru, AI (Claude Code) **harus** membaca f
 | claude-code-setup | `claude-plugins-official` | resmi Anthropic | Rekomendasi setup Claude Code |
 | claude-security | `claude-plugins-official` | resmi Anthropic | Review keamanan |
 
-### Cara pasang (otomatis)
-
-Dari root repo ini, jalankan:
-
-```bash
-bash scripts/setup-plugins.sh
-```
-
-Skrip itu idempotent: aman dijalankan berulang, melewati yang sudah terpasang.
-
-Alternatif manual, di dalam Claude Code:
-
-```
-/plugin marketplace add blader/humanizer
-/plugin marketplace add miqdadbadjuber/anti-slop
-/plugin marketplace add dietrichgebert/ponytail
-/plugin marketplace add obra/superpowers
-/plugin marketplace add juliusbrussee/caveman
-/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill
-/plugin marketplace add mvanhorn/last30days-skill
-/plugin marketplace add morluto/rea
-
-/plugin install humanizer@humanizer
-/plugin install antislop@anti-slop
-/plugin install ponytail@ponytail
-/plugin install superpowers@superpowers-dev
-/plugin install caveman@caveman
-/plugin install ui-ux-pro-max@ui-ux-pro-max-skill
-/plugin install last30days@last30days-skill
-/plugin install rea@rea
-/plugin install claude-code-setup@claude-plugins-official
-/plugin install claude-security@claude-plugins-official
-```
-
-Setelah terpasang, **restart Claude Code** agar skill dan hook termuat.
-
-### Verifikasi
-
-```bash
-claude plugin list
-```
-
-Kesepuluh plugin di tabel harus berstatus `enabled`.
+Pemasangan plugin dikerjakan AI lewat `scripts/setup-plugins.sh`, sesuai [CLAUDE.md](CLAUDE.md).
 
 ### Catatan
 
@@ -129,23 +113,16 @@ Folder `desktop/` membungkus server dan UI jadi satu app. Server jalan di port a
 
 **Pengaturan awal:** saat app dibuka pertama kali, dialog Pengaturan terbuka otomatis (sampai disimpan satu kali). Isinya:
 
-- **Token provider** (wajib per provider yang dipakai). Claude: jalankan `claude setup-token` di terminal lalu tempel hasilnya. Codex dan Gemini: API key masing-masing. Token disimpan di `settings.json` (izin 0600), tidak pernah dikirim balik ke UI, dan agent provider tanpa token gagal dengan pesan jelas. Env yang dipakai: `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`.
+- **Token provider** (wajib per provider yang dipakai). Claude: jalankan `claude setup-token` di terminal lalu tempel hasilnya. Codex dan Gemini: API key masing-masing. Token disimpan di `settings.json` (izin 0600), tidak pernah dikirim balik ke UI, dan agent provider tanpa token gagal dengan pesan jelas. Env yang dipakai: `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`. Setelah token Claude diisi, halaman utama menampilkan akun yang terhubung (email, organisasi, paket) dan dropdown model per agent diisi dari akun itu; keduanya diambil lewat SDK tanpa biaya inferensi dan hanya ditampilkan di UI lokal. SDK tidak menyediakan nama tampilan, jadi yang tampil adalah email; sapaan ("Halo, ...") memakai nama panggilan opsional yang Anda isi sendiri di Pengaturan.
 - **Plugin agent** dari katalog tetap di [plugins.ts](server/src/plugins.ts) (humanizer, antislop, ponytail, superpowers, caveman, ui-ux-pro-max, last30days, rea). Plugin dipin ke commit tertentu, diunduh otomatis saat dipilih (`git fetch` per SHA ke `<data pengguna>/plugins/`), dan dicek lagi sebelum tiap giliran agent: yang sudah terpasang dilewati tanpa jaringan. Gagal unduh tidak menghentikan agent. Hanya agent Claude yang memakai plugin. Server MCP milik plugin tidak dimuat (policy menolaknya), hook plugin tetap jalan. Memperbarui plugin = mengganti SHA di `plugins.ts`. Butuh `git`.
 
 **Platform:** `.deb` Linux x64 sudah dibangun dan diuji. Windows (NSIS) dan macOS (dmg) disiapkan lewat `desktop/scripts/dist.mjs` dan workflow [build.yml](.github/workflows/build.yml), yang membangun dan menguji ketiga platform di runner masing-masing (binary `claude` khusus platform, jadi tiap platform dibangun di mesinnya sendiri). CI hijau di ketiga OS: typecheck, tes unit, dan paket (`.exe` NSIS, `.dmg`, `.deb`) berhasil dibangun. Smoke Electron hanya berjalan di Linux, jadi app di Windows dan macOS **belum pernah dibuka dan dicoba**. Catatan Windows: Claude Code butuh Git for Windows (Git Bash), dan sandbox Bash mungkin tidak tersedia sehingga mode baca+tulis hanya memberi Edit dan Write.
 
-**Memasang dari paket `.deb` (Ubuntu):**
+**Memasang:** lihat [Cara pasang](#cara-pasang) di atas.
 
-```
-bash scripts/build-deb.sh                                    # bangun dari nol, sekitar 1,5 menit
-sudo apt install ./desktop/release/simply-agent_*_amd64.deb
-simply-agent                                           # atau cari "Simply Agent" di menu aplikasi
-sudo apt remove simply-agent                           # hapus app (data pengguna tetap)
-```
+Paket berukuran sekitar 230 MB (terpasang sekitar 650 MB) karena membawa binary `claude` milik SDK (366 MB). Linux dan Windows dibangun untuk x64; macOS mengikuti arsitektur runner CI.
 
-Paket berukuran sekitar 230 MB (terpasang sekitar 650 MB) karena membawa binary `claude` milik SDK (366 MB, satu-satunya yang dipakai di Linux x64). Hanya x64 yang dibangun.
-
-**Lokasi data pengguna** (data dari nama lama `agent-orchestrator` dipindahkan otomatis saat app pertama dibuka) (tetap ada setelah `apt remove`; hapus manual kalau ingin bersih):
+**Lokasi data pengguna** (tetap ada setelah `apt remove`; hapus manual kalau ingin bersih). Data dari nama lama `agent-orchestrator` dipindahkan otomatis saat app pertama dibuka:
 
 | Berkas | Isi |
 |---|---|
@@ -153,16 +130,16 @@ Paket berukuran sekitar 230 MB (terpasang sekitar 650 MB) karena membawa binary 
 | `~/.config/simply-agent/state/state.json` | Log, token, biaya, sesi Claude, dan antrean agent |
 | `~/.config/simply-agent/workspace/` | Workspace bawaan (bisa diganti di Pengaturan) |
 
-State disimpan di luar workspace, jadi agent tidak bisa membacanya. Login Claude memakai kredensial `claude` yang sudah ada di `~/.claude`; jalankan `claude` di terminal dan login sekali kalau belum.
+State disimpan di luar workspace, jadi agent tidak bisa membacanya. Agent memakai token yang diisi di Pengaturan, bukan login `~/.claude`.
 
 **Pengembangan dan tes:**
 
 ```
 cd /home/nusapala/git/agent/desktop
 npm start                       # build UI + app, lalu buka jendela
-npm run smoke                   # smoke test Electron: runner palsu, tanpa biaya (54 cek)
-npm test                        # tes pengaturan, validasi workspace, notifikasi, parser login, path UI
-npm run pack                    # app jadi tanpa .deb di release/linux-unpacked/
+npm run smoke                   # smoke test Electron: runner palsu, tanpa biaya
+npm test                        # tes pengaturan, validasi workspace, notifikasi, path UI
+npm run pack                    # app jadi tanpa installer di release/ (mis. linux-unpacked/)
 node scripts/e2e-packaged.mjs [path-app]                  # agent SUNGGUHAN dari app jadi (sekitar USD 0,02)
 node scripts/e2e-packaged.mjs [path-app] --bash-sandbox   # ditambah uji sandbox Bash (sekitar USD 0,05 lagi)
 ```

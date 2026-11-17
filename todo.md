@@ -56,6 +56,7 @@ Isolate data access in one hook, useAgents(), which returns { agents, edges, sen
 | 10 Uji akhir dan dokumentasi | Selesai, kecuali AppImage (opsional) | Build dari nol satu perintah |
 | 11 Token, plugin, nama, tema | Selesai | Plugin terbukti jalan di SDK |
 | 12 Cross-OS | **Sebagian** | CI hijau di 3 OS; app belum dicoba di Windows/macOS |
+| 13 Akun, model, layar awal | Selesai | Di branch `feat/next`, belum di-merge |
 
 Angka tes terakhir: server 25, desktop 9, smoke Electron lulus semua, smoke web lulus. Semua typecheck bersih.
 
@@ -226,19 +227,32 @@ Target: app desktop Ubuntu dalam format `.deb`. Folder baru `desktop/`.
 - [ ] Smoke Electron di Windows dan macOS, dan mencoba app sungguhan di sana (belum pernah).
 - [ ] Sandbox Bash di Windows tidak diketahui; Bash gagal-tertutup kalau tidak ada. Windows butuh Git for Windows.
 
+### Fase 13: Akun, model, dan layar awal (selesai, branch `feat/next`)
+- [x] Lisensi MIT (`LICENSE`, field `license` di tiga `package.json`).
+- [x] Model per agent diambil dari akun lewat SDK (`supportedModels`, tanpa inferensi), di-cache per token; sebelum token diisi hanya petunjuk.
+- [x] Akun yang terhubung dengan token (email, organisasi, paket) tampil di strip info; SDK tidak menyediakan nama tampilan.
+- [x] Nama panggilan opsional di Pengaturan, tampil sebagai "Halo, <nama>".
+- [x] Tanpa token, agent disembunyikan di app desktop: kartu "belum ada agent" dengan tombol isi token; pesan netral provider ("token belum diisi").
+- [x] Banner login lama dihapus (duplikat kartu kosong), berikut kode mati `authStatus`/`tokenStatus`.
+- [x] Scrollbar gelap (`color-scheme: dark`), minimap disembunyikan saat belum ada agent.
+
 ### Masih terbuka (urut prioritas)
 
-1. **(Anda) Pasang paket dengan sudo** (butuh password, tidak bisa dari sesi AI):
+1. **(Anda) Merge `feat/next`** (belum ada pull request) dan pasang paket baru dengan sudo:
    ```
    cd /home/nusapala/git/agent
    sudo apt install ./desktop/release/simply-agent_0.1.0_amd64.deb
    ```
-   Paket sudah dibangun ulang dengan nama, tema, token, dan plugin baru. Simulasi `apt-get -s` bersih. Setelah terpasang: jalankan `simply-agent`, isi token di pengaturan awal, lalu cek `sudo apt remove simply-agent`.
-2. **Coba app di Windows dan macOS** (artefak `.exe` dan `.dmg` ada di tab Actions). CI hanya membuktikan build dan tes unit; smoke Electron hanya di Linux.
-3. **Codex dan Gemini**: CLI belum terpasang dan Anda tidak punya akunnya. Adapter `server/src/providers/cli.ts` belum pernah diuji. Sementara itu agent non-Claude tidak bisa diverifikasi.
-4. **Tidak dikerjakan (keputusan Anda):** review `claude-security`, koreksi visual.
-5. **Diverifikasi lewat D-Bus di sesi GNOME ini:** tray terdaftar (StatusNotifierItem), notifikasi sampai ke GNOME saat jendela tidak fokus dan tidak muncul saat fokus, menu Ctrl+, membuka Pengaturan, dialog pilih folder dipanggil dengan opsi benar. **Belum dilihat langsung:** tampilan asli dialog sistem, ikon tray, dan dialog konfirmasi tutup.
-6. **Opsional (belum dikerjakan):** Bash di Linux lewat profil AppArmor/container, ukur performa puluhan node, lisensi, tombol "Hubungkan Claude" yang menjalankan `claude setup-token` dari app.
+   Setelah terpasang: buka app, isi token di pengaturan awal, lalu cek `sudo apt remove simply-agent`. Ini juga menguji migrasi data lama `~/.config/agent-orchestrator` (belum pernah dijalankan). `node desktop/scripts/e2e-packaged.mjs` (agent sungguhan, sekitar USD 0,02) butuh token di profil app terpasang.
+2. **(Anda) Coba app di Windows dan macOS** (artefak `.exe` dan `.dmg` di tab Actions). CI hanya membuktikan build dan tes unit; smoke Electron hanya di Linux.
+3. **Codex dan Gemini**: CLI belum terpasang dan belum ada akunnya. Adapter `server/src/providers/cli.ts` belum pernah diuji.
+4. **Belum dilihat langsung:** dialog sistem asli (pilih folder, konfirmasi tutup) dan ikon tray. Yang sudah terbukti lewat D-Bus: tray terdaftar, notifikasi (hanya saat jendela tidak fokus), menu Ctrl+,.
+5. **Tidak dikerjakan (keputusan Anda):** review `claude-security`.
+6. **Opsional:**
+   - Aturan "agent disembunyikan" dan dropdown model masih menunggu token Claude secara khusus; jadikan per provider kalau ada agent Codex/Gemini.
+   - Bash di Linux lewat profil AppArmor untuk bwrap atau container.
+   - Tombol "Hubungkan Claude" yang menjalankan `claude setup-token` dari app.
+   - Ukur performa kanvas dengan puluhan node; target AppImage; perbarui action CI yang masih target Node 20.
 
 ### Catatan penting
 - Pause hanya menahan antrean; giliran yang sedang jalan tetap selesai (keputusan Anda, lihat 5b).

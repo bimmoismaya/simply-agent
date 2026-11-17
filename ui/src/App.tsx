@@ -11,7 +11,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { Drawer } from "./components/Drawer";
 import { SettingsDialog } from "./components/SettingsDialog";
-import type { AuthInfo } from "./desktop";
+import type { AccountSummary } from "./desktop";
 
 const nodeTypes = { agent: AgentNode, group: GroupNode, preview: PreviewNode };
 const edgeTypes = { pulse: PulseEdge };
@@ -22,26 +22,36 @@ const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
 
 function Canvas() {
-  const { agents, edges, session, connection, lastError, sendCommand, control } = useAgents();
+  const { agents: allAgents, edges: allEdges, session, connection, lastError, sendCommand, control } = useAgents();
   const { setCenter, fitView } = useReactFlow();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const desktop = !!window.simply;
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [auth, setAuth] = useState<AuthInfo | null>(null);
-  const [rechecking, setRechecking] = useState(false);
   const [workspace, setWorkspace] = useState<string>();
-  useEffect(() => {
-    window.simply?.getSettings().then((i) => { setWorkspace(i.effectiveWorkspace); if (!i.settings.setupDone) setSettingsOpen(true); }).catch(() => {});
+  const [account, setAccount] = useState<AccountSummary>();
+  const [nickname, setNickname] = useState("");
+  // Di app desktop agent baru ditampilkan setelah token terpasang. null = belum diketahui (dianggap belum).
+  const [hasToken, setHasToken] = useState<boolean | null>(null);
+  const locked = desktop && hasToken !== true;
+  const agents = locked ? [] : allAgents;
+  const edges = locked ? [] : allEdges;
+  const loadProfile = useCallback((first = false) => {
+    window.simply?.getSettings().then((i) => {
+      setWorkspace(i.effectiveWorkspace);
+      setNickname(i.settings.nickname);
+      setHasToken(!!i.tokenSet.claude);
+      if (first && !i.settings.setupDone) setSettingsOpen(true);
+    }).catch(() => {});
   }, []);
+  useEffect(() => { loadProfile(true); }, [loadProfile]);
 
   // Hanya di app desktop: menu "Pengaturan…" dari proses utama, dan cek login Claude saat mulai.
   useEffect(() => window.simply?.onOpenSettings(() => setSettingsOpen(true)), []);
-  const checkAuth = useCallback(async () => {
-    if (!window.simply) return;
-    setRechecking(true);
-    try { setAuth(await window.simply.authStatus()); } catch { setAuth(null); } finally { setRechecking(false); }
+  // Akun yang terhubung dengan token: diambil saat mulai dan setiap token bisa berubah (dialog Pengaturan ditutup).
+  const loadAccount = useCallback(() => {
+    window.simply?.claudeInfo().then((r) => setAccount(r.ok ? r.account : undefined)).catch(() => setAccount(undefined));
   }, []);
-  useEffect(() => { void checkAuth(); }, [checkAuth]);
+  useEffect(() => { loadAccount(); }, [loadAccount]);
   const ordered = useMemo(() => orderAgents(agents), [agents]);
   const { nodes, boxes } = useMemo(() => buildLayout(agents, selectedId, PREVIEW), [agents, selectedId]);
 
@@ -85,7 +95,7 @@ function Canvas() {
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar agents={agents} session={session} connection={connection} lastError={lastError} workspace={workspace} onSettings={desktop ? () => setSettingsOpen(true) : undefined} />
+      <TopBar agents={agents} session={session} connection={connection} lastError={lastError} workspace={workspace} account={account} nickname={nickname} onSettings={desktop ? () => setSettingsOpen(true) : undefined} />
       <div className="flex min-h-0 flex-1">
         <Sidebar agents={ordered} selectedId={selectedId} onSelect={select} />
         <main className="vignette relative flex-1">
@@ -105,7 +115,7 @@ function Canvas() {
             style={{ background: "transparent" }}
           >
             <Background gap={22} size={1} color="#14333a" />
-            <MiniMap
+            {!locked && (<MiniMap
               pannable
               zoomable
               bgColor="#0a0e12"
@@ -114,25 +124,8 @@ function Canvas() {
               nodeStrokeWidth={4}
               nodeColor={(n) => (n.type === "group" ? "rgba(34,211,238,0.08)" : n.type === "preview" ? "#14333a" : "#22d3ee")}
               nodeStrokeColor={(n) => (n.type === "group" ? "rgba(34,211,238,0.6)" : "transparent")}
-            />
+            />)}
           </ReactFlow>
-          {desktop && auth?.loggedIn === false && (
-            <div role="alert" data-testid="auth-banner" className="absolute inset-x-0 top-3 z-20 mx-auto w-[min(620px,calc(100%-2rem))] border border-amber-400/70 bg-panel p-4 text-xs leading-5">
-              <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-amber-300">token claude belum diisi</p>
-              Agent tidak bisa jalan sebelum token diisi. Jalankan <code className="text-zinc-100">claude setup-token</code> di terminal,
-              lalu tempel hasilnya di Pengaturan, bagian token provider.
-              <div className="mt-2">
-                <button onClick={() => setSettingsOpen(true)}
-                  className="mr-2 border border-amber-400/60 px-3 py-1 text-[11px] uppercase tracking-widest text-amber-200 outline-none hover:bg-amber-400/10 focus-visible:ring-1 focus-visible:ring-amber-300">
-                  buka pengaturan
-                </button>
-                <button onClick={checkAuth} disabled={rechecking}
-                  className="border border-amber-400/60 px-3 py-1 text-[11px] uppercase tracking-widest text-amber-200 outline-none hover:bg-amber-400/10 focus-visible:ring-1 focus-visible:ring-amber-300 disabled:opacity-40">
-                  {rechecking ? "memeriksa…" : "cek ulang"}
-                </button>
-              </div>
-            </div>
-          )}
           {connection === "no-token" && (
             <div role="alert" className="absolute inset-x-0 top-8 z-20 mx-auto w-[min(560px,calc(100%-2rem))] border border-signal/60 bg-panel p-4 text-xs leading-5">
               <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-red-400">token belum ada</p>
@@ -140,9 +133,23 @@ function Canvas() {
               <code className="mt-1 block text-zinc-100">http://localhost:5173/?token=…</code>
             </div>
           )}
-          <CommandBar agents={ordered} onSend={sendCommand} onStopAll={stopAll} />
+          {locked && (
+            <div data-testid="no-agents" className="absolute inset-0 z-10 flex items-center justify-center p-6 text-center">
+              <div className="max-w-sm border border-signal/30 bg-panel/90 p-5 text-xs leading-5 text-dim">
+                <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-zinc-100">belum ada agent</p>
+                Agent muncul setelah token terpasang. Petunjuk cara mendapatkan token ada di Pengaturan, bagian token provider.
+                <div className="mt-3">
+                  <button onClick={() => setSettingsOpen(true)}
+                    className="border border-signal/50 px-3 py-1 text-[11px] uppercase tracking-widest text-cyan-100 outline-none hover:bg-signal/15 focus-visible:ring-1 focus-visible:ring-signal">
+                    isi token
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {!locked && <CommandBar agents={ordered} onSend={sendCommand} onStopAll={stopAll} />}
         </main>
-        {settingsOpen && <SettingsDialog agents={ordered} onClose={() => { setSettingsOpen(false); void checkAuth(); }} />}
+        {settingsOpen && <SettingsDialog agents={orderAgents(allAgents)} onClose={() => { setSettingsOpen(false); loadAccount(); loadProfile(); }} />}
         {selected && <Drawer agent={selected} onClose={() => setSelectedId(null)} onControl={control} />}
       </div>
     </div>

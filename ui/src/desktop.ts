@@ -8,6 +8,7 @@ export interface DesktopSettings {
   budgetUsd: number;
   models: Record<string, string>;
   notifications: boolean;
+  nickname: string;
   /** Selalu kosong dari app; token tidak dikirim ke UI. */
   tokens: Record<string, string>;
   plugins: string[];
@@ -26,7 +27,7 @@ export interface SettingsInfo {
 
 export type SaveResult = { ok: true; restart: boolean; pluginErrors: Record<string, string> } | { ok: false; error: string };
 export type ChooseResult = { canceled: true } | { error: string } | { path: string };
-export interface AuthInfo { loggedIn: boolean | null; method?: string; detail: string }
+export interface AccountSummary { email?: string; organization?: string; plan?: string }
 
 export interface SimplyBridge {
   connection(): Promise<{ url: string; token: string }>;
@@ -34,7 +35,7 @@ export interface SimplyBridge {
   saveSettings(s: DesktopSettings): Promise<SaveResult>;
   chooseWorkspace(): Promise<ChooseResult>;
   setToken(provider: string, token: string): Promise<{ ok: true } | { ok: false; error: string }>;
-  authStatus(): Promise<AuthInfo>;
+  claudeInfo(): Promise<{ ok: true; models: { value: string; name: string }[]; account: AccountSummary } | { ok: false; error: string }>;
   onOpenSettings(cb: () => void): () => void;
 }
 

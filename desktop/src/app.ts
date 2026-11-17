@@ -8,8 +8,9 @@ import {
 import type { AgentStatus, SessionInfo } from "../../shared/types.ts";
 import { startServer } from "../../server/src/index.ts";
 import { defaultRunner, type Limits, type Runner } from "../../server/src/engine.ts";
+import { loadClaudeInfo, type ClaudeInfo } from "../../server/src/models.ts";
 import { ensurePlugins, isInstalled, PLUGINS } from "../../server/src/plugins.ts";
-import { TOKEN_ENV, tokenStatus, type AuthStatus } from "./auth.ts";
+import { TOKEN_ENV } from "./auth.ts";
 import { agentNote, budgetNote, isBusy } from "./notify.ts";
 import { defaultWorkspace, loadSettings, PROVIDERS, saveSettings, SettingsSchema, validateWorkspace, type Settings } from "./settings.ts";
 import { resolveUiFile } from "./uipath.ts";
@@ -18,8 +19,8 @@ export interface LaunchOptions {
   /** Untuk smoke test: ganti agent sungguhan dengan runner palsu. */
   runner?: Runner;
   limits?: Limits;
-  /** Untuk smoke test: ganti pengecekan token Claude. */
-  authCheck?: () => Promise<AuthStatus>;
+  /** Untuk smoke test: ganti pengambilan model dan info akun dari provider. */
+  claudeInfo?: () => Promise<ClaudeInfo>;
   /** Untuk smoke test: buka port DevTools protocol (hanya di localhost). Tidak pernah diisi di app biasa. */
   debugPort?: number;
 }
@@ -164,7 +165,6 @@ export async function launch(opts: LaunchOptions = {}) {
   const port = await server.ready;
   const engine = server.engine;
 
-  const authCheck = opts.authCheck ?? (async () => tokenStatus(settings.tokens.claude ?? ""));
   let win: BrowserWindow;
   let tray: Tray | null = null;
   let quitting = false;
@@ -245,7 +245,20 @@ export async function launch(opts: LaunchOptions = {}) {
     return { ok: true };
   });
 
-  guarded("simply:authStatus", () => authCheck());
+  // Model dan identitas akun dari provider. Di-cache per token; token baru berarti ambil ulang.
+  let infoCache: { key: string; info: ClaudeInfo } | null = null;
+  guarded("simply:claudeInfo", async () => {
+    const key = settings.tokens.claude ?? "";
+    if (!key) return { ok: false, error: "Token belum diisi." };
+    if (infoCache?.key === key) return { ok: true, ...infoCache.info };
+    try {
+      const info = await (opts.claudeInfo ?? loadClaudeInfo)();
+      infoCache = { key, info };
+      return { ok: true, ...info };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  });
 
   // ---- Keamanan jendela ----
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));

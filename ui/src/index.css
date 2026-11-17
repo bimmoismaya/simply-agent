@@ -12,6 +12,7 @@
   --color-dim: #9aa7b0;
 }
 
+html { color-scheme: dark; } /* scrollbar dan kontrol bawaan ikut gelap */
 html, body, #root { height: 100%; }
 body {
   margin: 0;

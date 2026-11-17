@@ -83,8 +83,9 @@ try {
   await page.waitForFunction(() => document.querySelector('[role="status"]')?.textContent.includes("live"), { timeout: 20000 });
   ok(`app terbuka dan live (${APP})`);
 
-  const auth = await page.evaluate(() => window.simply.authStatus());
-  auth.loggedIn === true ? ok(`login Claude terdeteksi (${auth.method ?? "?"})`) : bad(`login Claude: ${JSON.stringify(auth)}`);
+  // Agent butuh token provider (diisi di Pengaturan app terpasang); tanpa itu info akun gagal.
+  const info = await page.evaluate(() => window.simply.claudeInfo());
+  info.ok ? ok(`token Claude terisi, akun terhubung (${info.account.plan ?? "?"})`) : bad(`token Claude: ${info.error}. Isi token di Pengaturan app dulu.`);
 
   const r = await runTask(page, "Otto", "Reply with exactly: PACKED_OK");
   const pass = r.log.includes("PACKED_OK") && /done/.test(r.status);

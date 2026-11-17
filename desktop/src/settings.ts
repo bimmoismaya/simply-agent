@@ -16,6 +16,8 @@ export const SettingsSchema = z.object({
   /** Override model per id agent. Yang tidak diisi memakai bawaan dari agents.config.ts. */
   models: z.record(z.string().min(1).max(40), z.string().min(1).max(80)).default({}),
   notifications: z.boolean().default(true),
+  /** Nama panggilan yang diisi pengguna sendiri; dipakai untuk sapaan di halaman utama. Kosong = tanpa sapaan. */
+  nickname: z.string().trim().max(40).default(""),
   /** Token per provider (claude: `claude setup-token`; codex: API key OpenAI; gemini: API key Gemini). Hanya di proses utama; tidak pernah dikirim balik ke UI. */
   /** Id plugin terpilih (dari katalog di server/src/plugins.ts). Id asing dibuang saat dipakai. */
   plugins: z.array(z.string().max(40)).max(20).default([]),
