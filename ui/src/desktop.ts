@@ -10,6 +10,8 @@ export interface DesktopSettings {
   notifications: boolean;
   /** Selalu kosong dari app; token tidak dikirim ke UI. */
   tokens: Record<string, string>;
+  plugins: string[];
+  setupDone: boolean;
 }
 
 export interface SettingsInfo {
@@ -18,9 +20,11 @@ export interface SettingsInfo {
   workspaceLocked: boolean;
   defaultWorkspace: string;
   tokenSet: Record<string, boolean>;
+  platform: string;
+  plugins: { id: string; name: string; desc: string; warn: string | null; installed: boolean }[];
 }
 
-export type SaveResult = { ok: true; restart: boolean } | { ok: false; error: string };
+export type SaveResult = { ok: true; restart: boolean; pluginErrors: Record<string, string> } | { ok: false; error: string };
 export type ChooseResult = { canceled: true } | { error: string } | { path: string };
 export interface AuthInfo { loggedIn: boolean | null; method?: string; detail: string }
 

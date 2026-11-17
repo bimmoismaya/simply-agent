@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { createSdkMcpServer, query, tool, type HookCallback, type Options } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { checkTool } from "../policy.ts";
@@ -67,6 +67,9 @@ export async function runClaudeTurn(opts: TurnHooks & {
     };
   };
 
+  // Plugin terpilih (path lokal, dipasang oleh app). MCP milik plugin tidak dimuat: policy menolaknya dan rea tidak boleh jalan.
+  const pluginPaths = (process.env.AGENT_PLUGINS ?? "").split(delimiter).filter(Boolean);
+
   const abortController = new AbortController();
   const options: Options = {
     cwd: opts.cwd,
@@ -76,7 +79,8 @@ export async function runClaudeTurn(opts: TurnHooks & {
     systemPrompt: opts.systemPrompt,
     resume: opts.resume,
     // Hanya tool yang boleh dipakai yang dimuat: skema tool lain tidak ikut dibaca ulang tiap putaran.
-    ...(allowAll ? {} : { tools: ["Read", "Glob", "Grep"] }),
+    ...(allowAll ? {} : { tools: ["Read", "Glob", "Grep", ...(pluginPaths.length ? ["Skill"] : [])] }),
+    ...(pluginPaths.length ? { plugins: pluginPaths.map((path) => ({ type: "local" as const, path, skipMcpDiscovery: true })) } : {}),
     // Batas putaran: mencegah loop mencoba ulang tool yang ditolak. Tiap putaran membaca ulang seluruh konteks.
     maxTurns: 8,
     abortController,

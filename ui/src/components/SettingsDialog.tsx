@@ -49,9 +49,16 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
     setBusy(true);
     setError(null);
     try {
-      const r = await window.simply!.saveSettings(draft);
+      const r = await window.simply!.saveSettings({ ...draft, setupDone: true });
       if (!r.ok) { setError(r.error); return; }
       if (r.restart) { setRestarting(true); return; }
+      const failed = Object.entries(r.pluginErrors);
+      if (failed.length) {
+        // Pengaturan sudah tersimpan; agent tetap jalan tanpa plugin yang gagal diunduh.
+        setError(`Plugin gagal diunduh (${failed.map(([id, m]) => `${id}: ${m}`).join("; ")}). Agent jalan tanpa plugin itu.`);
+        window.simply!.getSettings().then(setInfo).catch(() => {});
+        return;
+      }
       onClose();
     } catch (e) {
       setError(String(e));
@@ -74,6 +81,34 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
     <Shell onClose={onClose}>
       <h2 id="settings-title" className="border-b border-signal/20 px-5 py-3 font-display text-[15px] uppercase tracking-[0.3em] text-zinc-100">pengaturan</h2>
       <div className="max-h-[70vh] space-y-5 overflow-y-auto px-5 py-4 text-xs">
+        {!info.settings.setupDone && (
+          <p role="note" className="border border-signal/40 px-2 py-1 text-[11px] text-zinc-100">
+            Pengaturan awal: pilih plugin dan isi token provider, lalu simpan. Semuanya bisa diubah lagi lewat ⚙ pengaturan.
+          </p>
+        )}
+
+        <section>
+          <h3 className="mb-1 font-display text-[12px] uppercase tracking-[0.25em] text-signal">plugin agent</h3>
+          <p className="mb-2 text-[10px] text-dim">
+            Diunduh otomatis saat dipilih dan dicek sebelum tiap agent jalan. Hanya untuk agent Claude; Codex dan Gemini tidak memakai plugin.
+            Tiap plugin menambah token per giliran, jadi pilih seperlunya.
+          </p>
+          <div className="space-y-1">
+            {info.plugins.map((p) => (
+              <label key={p.id} className="flex cursor-pointer items-start gap-2">
+                <input type="checkbox" checked={draft.plugins.includes(p.id)} className="mt-0.5 accent-[#22d3ee]"
+                  onChange={(e) => set("plugins", e.target.checked ? [...draft.plugins, p.id] : draft.plugins.filter((x) => x !== p.id))} />
+                <span>
+                  <span className="text-zinc-100">{p.name}</span>{" "}
+                  <span className={p.installed ? "text-green-400" : "text-dim"}>{p.installed ? "terpasang" : "belum diunduh"}</span>
+                  <span className="block text-[10px] text-dim">{p.desc}</span>
+                  {p.warn && <span className="block text-[10px] text-amber-300">{p.warn}</span>}
+                </span>
+              </label>
+            ))}
+          </div>
+        </section>
+
         <section>
           <h3 className="mb-1 font-display text-[12px] uppercase tracking-[0.25em] text-signal">token provider</h3>
           <p className="mb-2 text-[10px] text-dim">
@@ -123,7 +158,7 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
           ))}
           {draft.toolMode === "all" && (
             <p role="note" className="mt-1 border border-amber-400/40 px-2 py-1 text-[10px] text-amber-300">
-              Agent bisa mengubah file di workspace. Bash butuh sandbox OS; di Ubuntu 24.04+ sandbox bisa gagal dan Bash ditolak (Edit dan Write tetap jalan). Mode ini juga memuat semua tool, jadi tiap giliran agent jauh lebih mahal (terukur sekitar 10 kali lipat untuk tugas pendek).
+              {info.platform !== "linux" && info.platform !== "darwin" && "Di sistem ini sandbox Bash mungkin tidak tersedia; kalau begitu Bash ditolak. "}Agent bisa mengubah file di workspace. Bash butuh sandbox OS; di Ubuntu 24.04+ sandbox bisa gagal dan Bash ditolak (Edit dan Write tetap jalan). Mode ini juga memuat semua tool, jadi tiap giliran agent jauh lebih mahal (terukur sekitar 10 kali lipat untuk tugas pendek).
             </p>
           )}
         </fieldset>
@@ -169,7 +204,7 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
           : <>
               {error && <p role="alert" className="mr-auto text-xs text-red-400">{error}</p>}
               <button onClick={onClose} className={`${btn} ml-auto border-signal/30 text-dim hover:bg-signal/10`}>batal</button>
-              <button onClick={save} disabled={busy} className={`${btn} border-signal/70 text-cyan-100 hover:bg-signal/20`}>simpan</button>
+              <button onClick={save} disabled={busy} className={`${btn} border-signal/70 text-cyan-100 hover:bg-signal/20`}>{busy ? "mengunduh…" : "simpan"}</button>
             </>}
       </div>
     </Shell>

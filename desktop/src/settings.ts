@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, parse, relative, resolve } from "node:path";
 import { z } from "zod";
 
 export const PROVIDERS = ["claude", "codex", "gemini"] as const;
@@ -17,6 +17,10 @@ export const SettingsSchema = z.object({
   models: z.record(z.string().min(1).max(40), z.string().min(1).max(80)).default({}),
   notifications: z.boolean().default(true),
   /** Token per provider (claude: `claude setup-token`; codex: API key OpenAI; gemini: API key Gemini). Hanya di proses utama; tidak pernah dikirim balik ke UI. */
+  /** Id plugin terpilih (dari katalog di server/src/plugins.ts). Id asing dibuang saat dipakai. */
+  plugins: z.array(z.string().max(40)).max(20).default([]),
+  /** false = pengaturan awal (pilih plugin dan token) belum pernah disimpan; UI membukanya otomatis. */
+  setupDone: z.boolean().default(false),
   tokens: z.partialRecord(z.enum(PROVIDERS), z.string().max(2000)).default({}),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
@@ -50,7 +54,8 @@ export function validateWorkspace(path: string, opts: { home?: string; protected
   const home = opts.home ?? homedir();
   if (!isAbsolute(path)) return "Path harus absolut.";
   const p = resolve(path);
-  if (p === "/" || p === resolve(home)) return "Folder terlalu luas. Pilih folder proyek di dalamnya.";
+  // parse(p).root = "/" di POSIX dan "C:\\" di Windows.
+  if (p === parse(p).root || p === resolve(home)) return "Folder terlalu luas. Pilih folder proyek di dalamnya.";
   if (opts.protectedDir) {
     const rel = relative(resolve(opts.protectedDir), p);
     if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) return "Folder ini dipakai app untuk menyimpan data. Pilih folder lain.";

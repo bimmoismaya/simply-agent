@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkTool } from "./policy.ts";
@@ -20,7 +20,10 @@ test("baca di dalam workspace diizinkan, di luar ditolak", () => {
 });
 
 test("symlink yang menunjuk ke luar workspace ditolak", () => {
-  symlinkSync("/etc", join(ws, "keluar"));
+  // Target nyata di luar workspace. "junction" dipakai di Windows (symlink biasa butuh hak admin); di POSIX diabaikan.
+  const outside = mkdtempSync(join(tmpdir(), "outside-"));
+  writeFileSync(join(outside, "passwd"), "x");
+  symlinkSync(outside, join(ws, "keluar"), "junction");
   no(checkTool("Read", { file_path: "keluar/passwd" }, ws, false));
 });
 
@@ -45,6 +48,8 @@ test("tool jaringan dan tool tak dikenal ditolak default", () => {
   ok(checkTool("WebFetch", { url: "https://x" }, ws, true));
   no(checkTool("mcp__evil__run", {}, ws, true));
   ok(checkTool("TodoWrite", {}, ws, false));
+  ok(checkTool("Skill", { skill: "humanizer" }, ws, false));
+  no(checkTool("mcp__rea__open_binary", {}, ws, true));
 });
 
 test("tool engine hanya lolos kalau ada di extraAllowed", () => {

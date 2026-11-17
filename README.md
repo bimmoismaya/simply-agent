@@ -127,6 +127,13 @@ Folder `desktop/` membungkus server dan UI jadi satu app. Server jalan di port a
 
 **Fitur:** dialog Pengaturan (workspace, mode akses agent, budget token dan USD, model per agent, notifikasi), pengecekan login Claude dengan banner petunjuk, notifikasi desktop saat agent selesai atau error (hanya kalau jendela tidak difokuskan), ikon tray (tampilkan, jeda/lanjutkan antrean, keluar), menu aplikasi, satu instance saja, dan konfirmasi saat menutup jendela kalau masih ada agent berjalan (keluar, sembunyikan ke tray, atau batal).
 
+**Pengaturan awal:** saat app dibuka pertama kali, dialog Pengaturan terbuka otomatis (sampai disimpan satu kali). Isinya:
+
+- **Token provider** (wajib per provider yang dipakai). Claude: jalankan `claude setup-token` di terminal lalu tempel hasilnya. Codex dan Gemini: API key masing-masing. Token disimpan di `settings.json` (izin 0600), tidak pernah dikirim balik ke UI, dan agent provider tanpa token gagal dengan pesan jelas. Env yang dipakai: `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`.
+- **Plugin agent** dari katalog tetap di [plugins.ts](server/src/plugins.ts) (humanizer, antislop, ponytail, superpowers, caveman, ui-ux-pro-max, last30days, rea). Plugin dipin ke commit tertentu, diunduh otomatis saat dipilih (`git fetch` per SHA ke `<data pengguna>/plugins/`), dan dicek lagi sebelum tiap giliran agent: yang sudah terpasang dilewati tanpa jaringan. Gagal unduh tidak menghentikan agent. Hanya agent Claude yang memakai plugin. Server MCP milik plugin tidak dimuat (policy menolaknya), hook plugin tetap jalan. Memperbarui plugin = mengganti SHA di `plugins.ts`. Butuh `git`.
+
+**Platform:** `.deb` Linux x64 sudah dibangun dan diuji. Windows (NSIS) dan macOS (dmg) disiapkan lewat `desktop/scripts/dist.mjs` dan workflow [build.yml](.github/workflows/build.yml), yang membangun dan menguji ketiga platform di runner masing-masing (binary `claude` khusus platform, jadi tiap platform dibangun di mesinnya sendiri). CI hijau di ketiga OS: typecheck, tes unit, dan paket (`.exe` NSIS, `.dmg`, `.deb`) berhasil dibangun. Smoke Electron hanya berjalan di Linux, jadi app di Windows dan macOS **belum pernah dibuka dan dicoba**. Catatan Windows: Claude Code butuh Git for Windows (Git Bash), dan sandbox Bash mungkin tidak tersedia sehingga mode baca+tulis hanya memberi Edit dan Write.
+
 **Memasang dari paket `.deb` (Ubuntu):**
 
 ```

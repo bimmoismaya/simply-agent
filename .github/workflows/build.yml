@@ -1,0 +1,79 @@
+name: build
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Tiap platform memasang binary claude miliknya sendiri lewat optionalDependencies.
+      - name: Install
+        shell: bash
+        run: |
+          for d in server ui desktop; do (cd $d && npm ci --no-audit --no-fund); done
+
+      - name: Typecheck
+        shell: bash
+        run: |
+          for d in server ui desktop; do (cd $d && npx tsc --noEmit); done
+
+      - name: Unit tests
+        shell: bash
+        run: |
+          # Kegagalan dicetak juga sebagai anotasi (terbaca tanpa login GitHub).
+          report() {
+            name=$1; shift
+            if "$@" > out.txt 2>&1; then tail -n 6 out.txt; return 0; fi
+            msg=$(grep -E "✖|test at|Error|expected:|actual:" out.txt | head -40 | cut -c1-200 | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=$name gagal::${msg:0:3500}"
+            tail -n 60 out.txt
+            return 1
+          }
+          rc=0
+          (cd server && report "tes server" npm test) || rc=1
+          (cd desktop && report "tes desktop" npm test) || rc=1
+          exit $rc
+
+      - name: Smoke test Electron (Linux, layar virtual)
+        if: runner.os == 'Linux'
+        working-directory: desktop
+        env:
+          SMOKE_NO_SANDBOX: "1"
+        run: |
+          if ! xvfb-run -a npm run smoke > out.txt 2>&1; then
+            msg=$(grep -E "✖|GAGAL|Error|sandbox|FATAL" out.txt | head -30 | cut -c1-200 | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=smoke gagal::${msg:0:3500}"
+            tail -n 60 out.txt
+            exit 1
+          fi
+          tail -n 4 out.txt
+
+      - name: Package
+        shell: bash
+        working-directory: desktop
+        run: |
+          node scripts/make-icon.mjs
+          npm run dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simply-agent-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            desktop/release/*.deb
+            desktop/release/*.exe
+            desktop/release/*.dmg

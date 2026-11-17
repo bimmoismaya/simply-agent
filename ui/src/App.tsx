@@ -31,7 +31,7 @@ function Canvas() {
   const [rechecking, setRechecking] = useState(false);
   const [workspace, setWorkspace] = useState<string>();
   useEffect(() => {
-    window.simply?.getSettings().then((i) => setWorkspace(i.effectiveWorkspace)).catch(() => {});
+    window.simply?.getSettings().then((i) => { setWorkspace(i.effectiveWorkspace); if (!i.settings.setupDone) setSettingsOpen(true); }).catch(() => {});
   }, []);
 
   // Hanya di app desktop: menu "Pengaturan…" dari proses utama, dan cek login Claude saat mulai.

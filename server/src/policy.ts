@@ -7,7 +7,8 @@ const READ_TOOLS = new Set(["Read", "Glob", "Grep", "LS"]);
 const WRITE_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
 const NETWORK_TOOLS = new Set(["WebFetch", "WebSearch"]);
 // ToolSearch hanya memuat skema tool yang ditunda; pemanggilan tool itu sendiri tetap dicek di sini.
-const ALWAYS_OK = new Set(["TodoWrite", "ToolSearch"]);
+// Skill hanya memuat teks skill; tool yang diminta skill tetap dicek di sini.
+const ALWAYS_OK = new Set(["TodoWrite", "ToolSearch", "Skill"]);
 const PATH_KEYS = ["file_path", "path", "notebook_path"];
 const DEFAULT_BASH = ["ls", "cat", "head", "tail", "wc", "pwd", "node", "npm", "npx", "git"];
 // Karakter yang memungkinkan merangkai atau mengalihkan perintah.
