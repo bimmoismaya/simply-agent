@@ -25,7 +25,7 @@
     "puppeteer-core": "^25.17.0",
     "typescript": "^7.0.2"
   },
-  "description": "Engine beberapa agent AI dengan UI kanvas",
+  "description": "Beberapa agent AI dengan UI kanvas",
   "author": {
     "name": "Simply Agent",
     "email": "noreply@example.invalid"
@@ -54,13 +54,13 @@
       "icon": "assets/icon.png",
       "executableName": "simply-agent",
       "maintainer": "Simply Agent <noreply@example.invalid>",
-      "synopsis": "Engine beberapa agent AI dengan UI kanvas",
+      "synopsis": "Beberapa agent AI dengan UI kanvas",
       "syncDesktopName": true,
       "desktop": {
         "entry": {
           "Name": "Simply Agent",
-          "Comment": "Engine beberapa agent AI",
-          "Keywords": "ai;agent;claude;engine;",
+          "Comment": "Beberapa agent AI dengan UI kanvas",
+          "Keywords": "ai;agent;claude;",
           "StartupWMClass": "simply-agent"
         }
       }

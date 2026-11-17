@@ -84,6 +84,18 @@ try {
   // Tunggu muat awal selesai (reload saat loadURL masih jalan membatalkannya dan app sengaja keluar).
   await waitLive(page, app1);
 
+  // Pengaturan awal: profil baru langsung membuka dialog dengan pilihan plugin; Esc menutupnya tanpa menyimpan.
+  const firstRun = await page.waitForSelector('[role="dialog"] [role="note"]', { timeout: 5000 }).then(() => true).catch(() => false);
+  check("profil baru membuka pengaturan awal", firstRun);
+  const pluginBoxes = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] input[type="checkbox"]')].length);
+  check("pengaturan awal menampilkan 8 plugin dan opsi notifikasi", pluginBoxes === 9, String(pluginBoxes));
+  await page.click('input[aria-label="Batas biaya USD"]', { clickCount: 3 });
+  await page.keyboard.type("1"); // Menyimpan menerapkan batas dari dialog; pertahankan batas uji $1.
+  // Menyimpan menandai pengaturan awal selesai; tanpa itu dialog muncul lagi setiap halaman dimuat ulang.
+  await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^simpan$/i.test(b.textContent.trim())).click());
+  await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 5000 }).catch(() => {});
+  check("simpan menutup pengaturan awal dan menandainya selesai", !(await dialogOpen(page)) && JSON.parse(readFileSync(join(PROFILE, "settings.json"), "utf8")).setupDone === true);
+
   // Banner login: cek pertama "belum login", tombol Cek ulang menghilangkannya.
   const banner = await page.waitForSelector('[data-testid="auth-banner"]', { timeout: 5000 }).then(() => true).catch(() => false);
   check("banner 'belum login ke Claude' tampil", banner);
@@ -193,7 +205,8 @@ try {
   await page.evaluate(() => [...document.querySelectorAll('input[name="toolMode"]')][1].click());
   const warn = await page.waitForSelector('[role="note"]', { timeout: 3000 }).then(() => true).catch(() => false);
   check("mode baca+tulis menampilkan peringatan sandbox", warn);
-  await page.click('input[aria-label="Batas biaya USD"]', { clickCount: 3 });
+  await page.click('input[aria-label="Batas biaya USD"]');
+  await page.keyboard.down("Control"); await page.keyboard.press("a"); await page.keyboard.up("Control");
   await page.keyboard.type("2.5");
   await page.select('select[aria-label="Model Dax"]', "claude-haiku-5-5");
   await page.screenshot({ path: join(OUT, "4-pengaturan.png") });
@@ -211,6 +224,11 @@ try {
 
   const infoBar = await page.evaluate(() => document.querySelector('[data-testid="info-bar"]')?.textContent ?? "");
   check("halaman utama menampilkan AI dan folder", infoBar.includes("claude") && infoBar.includes(WORKSPACE), infoBar.slice(0, 120));
+
+  // Plugin: id di luar katalog dibuang, tidak pernah dipakai sebagai URL atau path.
+  const cur2 = await page.evaluate(() => window.simply.getSettings());
+  const pr = await page.evaluate((c) => window.simply.saveSettings({ ...c.settings, plugins: ["asing", "../etc"] }), cur2);
+  check("plugin di luar katalog dibuang saat simpan", pr.ok === true && JSON.parse(readFileSync(join(PROFILE, "settings.json"), "utf8")).plugins.length === 0);
 
   // Token provider: tersimpan di settings.json, tidak pernah dikembalikan ke UI, input aneh ditolak.
   const t1 = await page.evaluate(() => window.simply.setToken("codex", "sk-rahasia-123"));

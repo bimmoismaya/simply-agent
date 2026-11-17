@@ -45,6 +45,8 @@ test("tool jaringan dan tool tak dikenal ditolak default", () => {
   ok(checkTool("WebFetch", { url: "https://x" }, ws, true));
   no(checkTool("mcp__evil__run", {}, ws, true));
   ok(checkTool("TodoWrite", {}, ws, false));
+  ok(checkTool("Skill", { skill: "humanizer" }, ws, false));
+  no(checkTool("mcp__rea__open_binary", {}, ws, true));
 });
 
 test("tool engine hanya lolos kalau ada di extraAllowed", () => {

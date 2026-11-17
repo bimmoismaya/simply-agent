@@ -4,10 +4,10 @@ import { launch } from "./app.ts";
 import { fakeRunner } from "../../server/scripts/fake-runner.ts";
 import type { AuthStatus } from "./auth.ts";
 
-// SIMPLY_FAKE_AUTH=out: pengecekan pertama "belum login", sesudahnya "login" (menguji tombol Cek ulang).
+// SIMPLY_FAKE_AUTH=out: dua pengecekan pertama (mulai app dan tutup pengaturan awal) "belum login", sesudahnya "login" (menguji tombol Cek ulang).
 let calls = 0;
 const authCheck = async (): Promise<AuthStatus> =>
-  process.env.SIMPLY_FAKE_AUTH === "out" && calls++ === 0
+  process.env.SIMPLY_FAKE_AUTH === "out" && calls++ < 2
     ? { loggedIn: false, detail: "Belum login ke Claude." }
     : { loggedIn: true, method: "claude.ai", detail: "Login lewat claude.ai." };
 

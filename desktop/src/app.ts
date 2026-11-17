@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, renameSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, session, Tray,
@@ -8,6 +8,7 @@ import {
 import type { AgentStatus, SessionInfo } from "../../shared/types.ts";
 import { startServer } from "../../server/src/index.ts";
 import { defaultRunner, type Limits, type Runner } from "../../server/src/engine.ts";
+import { ensurePlugins, isInstalled, PLUGINS } from "../../server/src/plugins.ts";
 import { TOKEN_ENV, tokenStatus, type AuthStatus } from "./auth.ts";
 import { agentNote, budgetNote, isBusy } from "./notify.ts";
 import { defaultWorkspace, loadSettings, PROVIDERS, saveSettings, SettingsSchema, validateWorkspace, type Settings } from "./settings.ts";
@@ -130,12 +131,22 @@ export async function launch(opts: LaunchOptions = {}) {
     }
   };
   applyTokens(settings);
+  // Plugin: pastikan pilihan terpasang (unduh kalau belum), lalu beri tahu provider lewat env. Dipanggil juga sebelum tiap giliran agent.
+  const pluginRoot = join(userData, "plugins");
+  const preparePlugins = async () => {
+    const r = await ensurePlugins(settings.plugins, pluginRoot);
+    process.env.AGENT_PLUGINS = r.paths.join(delimiter);
+    for (const [id, msg] of Object.entries(r.errors)) console.warn(`plugin ${id} gagal diunduh: ${msg}`);
+    return r.errors;
+  };
+
   // Tanpa token, agent provider itu gagal dengan pesan jelas, bukan jatuh ke login CLI.
   const gatedRunner: Runner = (cfg, task, ctx) => {
     if (!settings.tokens[cfg.provider]) {
       return Promise.reject(new Error(`Token ${cfg.provider} belum diisi. Buka Pengaturan dan tempel token.`));
     }
-    return defaultRunner(cfg, task, ctx);
+    // Gagal unduh plugin tidak menghentikan agent; ia jalan tanpa plugin itu.
+    return preparePlugins().then(() => defaultRunner(cfg, task, ctx));
   };
 
   const limitsOf = (s: Settings): Limits => ({ tokens: s.tokenBudget, usd: s.budgetUsd });
@@ -180,6 +191,8 @@ export async function launch(opts: LaunchOptions = {}) {
     effectiveWorkspace: workspace,
     workspaceLocked: envWorkspace !== null,
     defaultWorkspace: fallbackWorkspace,
+    platform: process.platform,
+    plugins: PLUGINS.map((p) => ({ id: p.id, name: p.name, desc: p.desc, warn: p.warn ?? null, installed: isInstalled(pluginRoot, p) })),
   }));
 
   guarded("simply:chooseWorkspace", async () => {
@@ -193,10 +206,10 @@ export async function launch(opts: LaunchOptions = {}) {
     return error ? { error } : { path: r.filePaths[0] };
   });
 
-  guarded("simply:saveSettings", (arg) => {
+  guarded("simply:saveSettings", async (arg) => {
     const parsed = SettingsSchema.safeParse(arg);
     if (!parsed.success) return { ok: false, error: "Pengaturan tidak valid." };
-    const next = { ...parsed.data, tokens: settings.tokens };
+    const next = { ...parsed.data, tokens: settings.tokens, plugins: parsed.data.plugins.filter((id) => PLUGINS.some((p) => p.id === id)) };
     if (envWorkspace && next.workspace !== settings.workspace) return { ok: false, error: "Workspace dikunci oleh SIMPLY_WORKSPACE." };
     if (next.workspace) {
       const error = validateWorkspace(next.workspace, { protectedDir: userData });
@@ -207,12 +220,14 @@ export async function launch(opts: LaunchOptions = {}) {
     settings = next;
     applyToolMode(next);
     engine.configure({ limits: limitsOf(next), models: next.models });
+    // Unduh plugin terpilih sekarang, supaya kegagalan terlihat di dialog dan bukan saat agent jalan.
+    const pluginErrors = await preparePlugins();
     // Workspace dipakai sebagai cwd semua agent dan state server, jadi perubahan butuh mulai ulang.
     if (workspaceChanged) {
       setTimeout(() => { app.relaunch(); app.quit(); }, 400);
-      return { ok: true, restart: true };
+      return { ok: true, restart: true, pluginErrors };
     }
-    return { ok: true, restart: false };
+    return { ok: true, restart: false, pluginErrors };
   });
 
   guarded("simply:setToken", (arg) => {
@@ -351,6 +366,7 @@ export async function launch(opts: LaunchOptions = {}) {
     });
   });
 
+  void preparePlugins();
   await win.loadURL(devUrl ?? `${ORIGIN}/`);
 
   // Tutup rapi: batalkan giliran agent yang berjalan, simpan state, baru keluar.
