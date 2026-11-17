@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, parse, relative, resolve } from "node:path";
 import { z } from "zod";
 
 export const PROVIDERS = ["claude", "codex", "gemini"] as const;
@@ -54,7 +54,8 @@ export function validateWorkspace(path: string, opts: { home?: string; protected
   const home = opts.home ?? homedir();
   if (!isAbsolute(path)) return "Path harus absolut.";
   const p = resolve(path);
-  if (p === "/" || p === resolve(home)) return "Folder terlalu luas. Pilih folder proyek di dalamnya.";
+  // parse(p).root = "/" di POSIX dan "C:\\" di Windows.
+  if (p === parse(p).root || p === resolve(home)) return "Folder terlalu luas. Pilih folder proyek di dalamnya.";
   if (opts.protectedDir) {
     const rel = relative(resolve(opts.protectedDir), p);
     if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) return "Folder ini dipakai app untuk menyimpan data. Pilih folder lain.";
