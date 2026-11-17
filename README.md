@@ -38,36 +38,6 @@ Token ditempel di **⚙ pengaturan → token provider → pasang**. Disimpan han
 
 Codex dan Gemini belum pernah diuji di app ini (belum ada akunnya), jadi petunjuk keduanya belum terbukti.
 
-## WAJIB: setup plugin sebelum mengerjakan tugas apa pun
-
-Kalau repo ini dibuka di laptop/mesin baru, AI (Claude Code) **harus** membaca file ini dan memastikan semua plugin di bawah sudah terpasang **sebelum** mengerjakan tugas. Jangan mulai bekerja sebelum langkah ini selesai.
-
-### Daftar plugin
-
-| Plugin | Marketplace | Sumber | Fungsi |
-|---|---|---|---|
-| humanizer | `humanizer` | `blader/humanizer` | Menulis ulang teks agar tidak terdengar seperti AI |
-| antislop | `anti-slop` | `miqdadbadjuber/anti-slop` | Aturan anti "AI slop" untuk UI, copy, dan kode (6 skill + MCP kontras warna, butuh Python 3) |
-| ponytail | `ponytail` | `dietrichgebert/ponytail` | Mode "senior malas": solusi paling sederhana yang berfungsi |
-| superpowers | `superpowers-dev` | `obra/superpowers` | Skill TDD, debugging, dan alur kerja kolaborasi |
-| caveman | `caveman` | `juliusbrussee/caveman` | Mode komunikasi ringkas (butuh Node.js) |
-| ui-ux-pro-max | `ui-ux-pro-max-skill` | `nextlevelbuilder/ui-ux-pro-max-skill` | Basis data gaya, palet, font, dan panduan UI/UX |
-| last30days | `last30days-skill` | `mvanhorn/last30days-skill` | Riset topik dari Reddit, X, YouTube, HN, dll. (30 hari terakhir) |
-| rea | `rea` | `morluto/rea` | Reverse engineering dengan agent (paket npm `rea-agents`). Hanya untuk analisis yang sah, lihat DISCLAIMER di repo-nya |
-| claude-code-setup | `claude-plugins-official` | resmi Anthropic | Rekomendasi setup Claude Code |
-| claude-security | `claude-plugins-official` | resmi Anthropic | Review keamanan |
-
-Pemasangan plugin dikerjakan AI lewat `scripts/setup-plugins.sh`, sesuai [CLAUDE.md](CLAUDE.md).
-
-### Catatan
-
-- Prasyarat: `claude` CLI, `git`, Node.js, dan Python 3.
-- **rea butuh Node.js >= 22.23.4** (atau 24.22.1+, 26.12.1+). Node yang lebih lama membuat MCP `rea` gagal dengan `CONNECTION_CLOSED`. Cek dengan `node -v`. Tanpa sudo: unduh tarball dari nodejs.org ke `~/.local/node`, lalu `ln -sfn ~/.local/node/bin/node ~/.local/bin/node` (pastikan `~/.local/bin` ada di PATH sebelum `/usr/bin`).
-- `.claude/settings.json` di repo ini sudah mendeklarasikan marketplace dan plugin di atas, jadi Claude Code akan menawarkan pemasangannya saat repo dipercaya (trust).
-- ponytail punya 4 opsi konfigurasi (`/plugin configure ponytail@ponytail`). Webhook kosong secara default, jadi tidak ada data yang keluar dari mesin.
-- caveman mengubah gaya jawaban AI menjadi sangat ringkas. Matikan lewat `/plugin disable caveman@caveman` kalau tidak diinginkan.
-- Semua plugin pihak ketiga dipasang atas permintaan pemilik repo. Periksa isinya sendiri sebelum memasangnya di mesin lain yang sensitif.
-
 ## Status saat ini
 
 Proyek ini menjalankan beberapa agent AI dengan UI kanvas. Rencana lengkap per fase ada di [todo.md](todo.md).
