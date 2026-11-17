@@ -11,6 +11,9 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tokens, setTokens] = useState<Record<string, string>>({});
+  // Daftar model dari akun provider: null = belum/sedang diambil.
+  const [models, setModels] = useState<{ value: string; name: string }[] | null>(null);
+  const [modelsError, setModelsError] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
   const firstRef = useRef<HTMLButtonElement>(null);
 
@@ -21,6 +24,17 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
     return () => { alive = false; };
   }, []);
   useEffect(() => { if (draft) firstRef.current?.focus(); }, [draft === null]);
+  // Daftar model hanya diambil setelah token Claude terisi, dan diambil ulang saat token diganti.
+  const hasClaude = !!info?.tokenSet.claude;
+  const [tokenRev, setTokenRev] = useState(0);
+  useEffect(() => {
+    if (!hasClaude) { setModels(null); setModelsError(null); return; }
+    let alive = true;
+    setModels(null); setModelsError(null);
+    window.simply?.listModels().then((r) => { if (!alive) return; if (r.ok) setModels(r.models); else setModelsError(r.error); })
+      .catch((e) => alive && setModelsError(String(e)));
+    return () => { alive = false; };
+  }, [hasClaude, tokenRev]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
     window.addEventListener("keydown", onKey, true);
@@ -73,6 +87,7 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
     if (!r.ok) { setError(r.error); return; }
     setTokens({ ...tokens, [provider]: "" });
     setInfo({ ...info, tokenSet: { ...info.tokenSet, [provider]: !!tokens[provider]?.trim() } });
+    if (provider === "claude") setTokenRev((n) => n + 1);
   };
 
   const num = (v: string) => (v.trim() === "" ? 0 : Number(v));
@@ -176,21 +191,33 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
 
         <section>
           <h3 className="mb-1 font-display text-[12px] uppercase tracking-[0.25em] text-signal">model per agent</h3>
-          <p className="mb-2 text-[10px] text-dim">Berlaku mulai giliran berikutnya. Opus paling mahal; Haiku paling murah.</p>
-          <div className="grid grid-cols-[90px_1fr] items-center gap-x-3 gap-y-1">
-            {agents.map((a) => {
-              const current = draft.models[a.id] ?? a.model;
-              const options = KNOWN_MODELS.includes(current) ? KNOWN_MODELS : [current, ...KNOWN_MODELS];
-              return (
-                <label key={a.id} className="contents">
-                  <span className="text-zinc-100">{a.name} <span className="text-[10px] text-dim">{a.role}</span></span>
-                  <select value={current} onChange={(e) => set("models", { ...draft.models, [a.id]: e.target.value })} className={field} aria-label={`Model ${a.name}`}>
-                    {options.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </label>
-              );
-            })}
-          </div>
+          {!hasClaude ? (
+            <p data-testid="models-hint" className="text-[10px] text-amber-300">Isi token Claude di bagian token provider dulu. Setelah itu daftar model dan pilihan per agent muncul di sini, diambil dari akun Anda.</p>
+          ) : models === null && !modelsError ? (
+            <p role="status" className="text-[10px] text-dim">Mengambil daftar model dari akun Claude…</p>
+          ) : (
+            <>
+              <p className="mb-2 text-[10px] text-dim">
+                Berlaku mulai giliran berikutnya. Daftar model diambil dari akun Claude Anda.
+                {modelsError && <span className="block text-amber-300">Gagal mengambil daftar ({modelsError}); memakai daftar bawaan.</span>}
+              </p>
+              <div className="grid grid-cols-[90px_1fr] items-center gap-x-3 gap-y-1">
+                {agents.map((a) => {
+                  const current = draft.models[a.id] ?? a.model;
+                  const base = models ?? KNOWN_MODELS.map((value) => ({ value, name: value }));
+                  const options = base.some((m) => m.value === current) ? base : [{ value: current, name: current }, ...base];
+                  return (
+                    <label key={a.id} className="contents">
+                      <span className="text-zinc-100">{a.name} <span className="text-[10px] text-dim">{a.role}</span></span>
+                      <select value={current} onChange={(e) => set("models", { ...draft.models, [a.id]: e.target.value })} className={field} aria-label={`Model ${a.name}`}>
+                        {options.map((m) => <option key={m.value} value={m.value}>{m.name === m.value ? m.value : `${m.name} (${m.value})`}</option>)}
+                      </select>
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </section>
 
         <label className="flex cursor-pointer items-center gap-2">

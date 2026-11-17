@@ -11,7 +11,14 @@ const authCheck = async (): Promise<AuthStatus> =>
     ? { loggedIn: false, detail: "Belum login ke Claude." }
     : { loggedIn: true, method: "claude.ai", detail: "Login lewat claude.ai." };
 
-launch({ runner: fakeRunner, limits: { usd: 1 }, authCheck, debugPort: Number(process.env.SIMPLY_DEBUG_PORT ?? 9333) }).catch((err) => {
+// Daftar model palsu: smoke tidak boleh memanggil provider.
+const listModels = async () => [
+  { value: "claude-opus-5-5", name: "Opus 5.5" },
+  { value: "claude-sonnet-5-5", name: "Sonnet 5.5" },
+  { value: "claude-haiku-5-5", name: "Haiku 5.5" },
+];
+
+launch({ runner: fakeRunner, limits: { usd: 1 }, authCheck, listModels, debugPort: Number(process.env.SIMPLY_DEBUG_PORT ?? 9333) }).catch((err) => {
   console.error(err);
   process.exit(1);
 });

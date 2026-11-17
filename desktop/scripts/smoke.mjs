@@ -91,6 +91,10 @@ try {
   check("profil baru membuka pengaturan awal", firstRun);
   const pluginBoxes = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] input[type="checkbox"]')].length);
   check("pengaturan awal menampilkan 8 plugin dan opsi notifikasi", pluginBoxes === 9, String(pluginBoxes));
+  // Tanpa token Claude: bagian model hanya petunjuk, belum ada daftar agent.
+  const hint = await page.$('[data-testid="models-hint"]').then(Boolean);
+  const modelSelects = await page.$$eval('select[aria-label^="Model "]', (e) => e.length);
+  check("tanpa token Claude: model per agent hanya petunjuk", hint && modelSelects === 0, `hint=${hint} select=${modelSelects}`);
   await page.click('input[aria-label="Batas biaya USD"]', { clickCount: 3 });
   await page.keyboard.type("1"); // Menyimpan menerapkan batas dari dialog; pertahankan batas uji $1.
   // Menyimpan menandai pengaturan awal selesai; tanpa itu dialog muncul lagi setiap halaman dimuat ulang.
@@ -124,8 +128,8 @@ try {
     bridgeKeys: Object.keys(window.simply ?? {}).sort(),
   }));
   check("renderer tidak punya require/process (tanpa akses Node)", surface.require === "undefined" && surface.process === "undefined", JSON.stringify(surface));
-  const expectedKeys = ["authStatus", "chooseWorkspace", "connection", "getSettings", "onOpenSettings", "saveSettings", "setToken"];
-  check("jembatan preload hanya menyediakan 6 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
+  const expectedKeys = ["authStatus", "chooseWorkspace", "connection", "getSettings", "listModels", "onOpenSettings", "saveSettings", "setToken"];
+  check("jembatan preload hanya menyediakan 8 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
 
   // CSP dibuktikan lewat pelanggaran sungguhan: fetch ke luar harus ditolak oleh connect-src, bukan oleh jaringan.
   const violation = await page.evaluate(() => new Promise((res) => {
@@ -200,6 +204,15 @@ try {
   check("ganti workspace saat terkunci env ditolak", bad3.ok === false && /dikunci/i.test(bad3.error), JSON.stringify(bad3));
   const unchanged = await page.evaluate(() => window.simply.getSettings());
   check("pengaturan tidak berubah setelah simpan ditolak", JSON.stringify(unchanged.settings) === JSON.stringify(cur.settings));
+
+  // Setelah token Claude diisi, dropdown berisi model dari provider (di smoke: daftar palsu).
+  await page.evaluate(() => window.simply.setToken("claude", "token-uji"));
+  await openSettings();
+  await page.waitForSelector('select[aria-label="Model Dax"]', { timeout: 5000 });
+  const opts = await page.$$eval('select[aria-label="Model Dax"] option', (o) => o.map((x) => x.value));
+  check("dengan token Claude: dropdown berisi model dari provider", opts.join() === "claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5", opts.join());
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 3000 }).catch(() => {});
 
   // Ubah lewat UI: mode baca+tulis, budget USD 2.5, model Dax ke Haiku.
   await openSettings();

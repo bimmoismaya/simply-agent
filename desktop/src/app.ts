@@ -8,6 +8,7 @@ import {
 import type { AgentStatus, SessionInfo } from "../../shared/types.ts";
 import { startServer } from "../../server/src/index.ts";
 import { defaultRunner, type Limits, type Runner } from "../../server/src/engine.ts";
+import { listClaudeModels, type ModelChoice } from "../../server/src/models.ts";
 import { ensurePlugins, isInstalled, PLUGINS } from "../../server/src/plugins.ts";
 import { TOKEN_ENV, tokenStatus, type AuthStatus } from "./auth.ts";
 import { agentNote, budgetNote, isBusy } from "./notify.ts";
@@ -20,6 +21,8 @@ export interface LaunchOptions {
   limits?: Limits;
   /** Untuk smoke test: ganti pengecekan token Claude. */
   authCheck?: () => Promise<AuthStatus>;
+  /** Untuk smoke test: ganti pengambilan daftar model dari provider. */
+  listModels?: () => Promise<ModelChoice[]>;
   /** Untuk smoke test: buka port DevTools protocol (hanya di localhost). Tidak pernah diisi di app biasa. */
   debugPort?: number;
 }
@@ -243,6 +246,21 @@ export async function launch(opts: LaunchOptions = {}) {
     settings = next;
     applyTokens(next);
     return { ok: true };
+  });
+
+  // Daftar model dari akun provider. Di-cache per token; token baru berarti ambil ulang.
+  let modelCache: { key: string; models: ModelChoice[] } | null = null;
+  guarded("simply:listModels", async () => {
+    const key = settings.tokens.claude ?? "";
+    if (!key) return { ok: false, error: "Token Claude belum diisi." };
+    if (modelCache?.key === key) return { ok: true, models: modelCache.models };
+    try {
+      const models = await (opts.listModels ?? listClaudeModels)();
+      modelCache = { key, models };
+      return { ok: true, models };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
   });
 
   guarded("simply:authStatus", () => authCheck());

@@ -34,6 +34,7 @@ export interface SimplyBridge {
   saveSettings(s: DesktopSettings): Promise<SaveResult>;
   chooseWorkspace(): Promise<ChooseResult>;
   setToken(provider: string, token: string): Promise<{ ok: true } | { ok: false; error: string }>;
+  listModels(): Promise<{ ok: true; models: { value: string; name: string }[] } | { ok: false; error: string }>;
   authStatus(): Promise<AuthInfo>;
   onOpenSettings(cb: () => void): () => void;
 }
