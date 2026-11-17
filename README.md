@@ -28,6 +28,16 @@ Build Windows dan macOS lulus di CI, tapi app-nya belum pernah dicoba di sana.
 
 **Pertama kali dibuka:** dialog pengaturan awal muncul. Pilih plugin, isi token provider, lalu simpan (rinciannya di bagian [App desktop](#app-desktop-electron)). Data pengguna disimpan di `~/.config/simply-agent/` (Linux), `%APPDATA%\simply-agent\` (Windows), atau `~/Library/Application Support/simply-agent/` (macOS).
 
+### Cara mendapatkan token
+
+Token ditempel di **⚙ pengaturan → token provider → pasang**. Disimpan hanya di komputer ini (`settings.json`, izin 0600) dan tidak ditampilkan lagi. Jangan dibagikan; kalau bocor, cabut dari akun penyedianya.
+
+- **Claude** (butuh langganan Claude): di terminal jalankan `claude setup-token`, selesaikan login di browser, lalu salin token panjang yang dicetak. Yang diterima kolom ini adalah token dari perintah itu, bukan API key Anthropic. Belum punya `claude` di terminal? Di Linux, app ini membawa binary-nya: `/opt/simply-agent/resources/app.asar.unpacked/node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude setup-token`. Di Windows dan macOS, pasang Claude Code dulu.
+- **Codex:** buat API key OpenAI di <https://platform.openai.com/api-keys>.
+- **Gemini:** buat API key di Google AI Studio, <https://aistudio.google.com/apikey>.
+
+Codex dan Gemini belum pernah diuji di app ini (belum ada akunnya), jadi petunjuk keduanya belum terbukti.
+
 ## WAJIB: setup plugin sebelum mengerjakan tugas apa pun
 
 Kalau repo ini dibuka di laptop/mesin baru, AI (Claude Code) **harus** membaca file ini dan memastikan semua plugin di bawah sudah terpasang **sebelum** mengerjakan tugas. Jangan mulai bekerja sebelum langkah ini selesai.
