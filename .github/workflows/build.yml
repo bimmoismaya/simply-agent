@@ -34,13 +34,31 @@ jobs:
       - name: Unit tests
         shell: bash
         run: |
-          (cd server && npm test)
-          (cd desktop && npm test)
+          # Kegagalan dicetak juga sebagai anotasi (terbaca tanpa login GitHub).
+          report() {
+            name=$1; shift
+            if "$@" > out.txt 2>&1; then tail -n 6 out.txt; return 0; fi
+            msg=$(grep -E "^(not ok|# Subtest|\s+(✖|error:|message:|expected:|actual:|code:))|Error" out.txt | head -40 | cut -c1-200 | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=$name gagal::${msg:0:3500}"
+            tail -n 60 out.txt
+            return 1
+          }
+          (cd server && report "tes server" npm test)
+          (cd desktop && report "tes desktop" npm test)
 
       - name: Smoke test Electron (Linux, layar virtual)
         if: runner.os == 'Linux'
         working-directory: desktop
-        run: xvfb-run -a npm run smoke
+        env:
+          SMOKE_NO_SANDBOX: "1"
+        run: |
+          if ! xvfb-run -a npm run smoke > out.txt 2>&1; then
+            msg=$(grep -E "✖|GAGAL|Error|sandbox|FATAL" out.txt | head -30 | cut -c1-200 | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=smoke gagal::${msg:0:3500}"
+            tail -n 60 out.txt
+            exit 1
+          fi
+          tail -n 4 out.txt
 
       - name: Package
         shell: bash

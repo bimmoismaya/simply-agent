@@ -33,7 +33,9 @@ function spawnApp(extraEnv, debugPort) {
   const env = { ...process.env, SIMPLY_DEBUG_PORT: String(debugPort), SIMPLY_WORKSPACE: WORKSPACE, ...extraEnv };
   delete env.ELECTRON_RUN_AS_NODE; // diwariskan terminal VS Code; membuat Electron jalan sebagai Node biasa
   const app = { log: "", exited: null, child: null };
-  app.child = spawn(electron, [ENTRY, `--user-data-dir=${PROFILE}`], { cwd: DIR, env, stdio: ["ignore", "pipe", "pipe"] });
+  // CI Linux (AppArmor membatasi user namespace): sandbox Chromium tidak bisa dibuat, jadi dimatikan hanya untuk tes.
+  const args = [ENTRY, `--user-data-dir=${PROFILE}`, ...(process.env.SMOKE_NO_SANDBOX ? ["--no-sandbox"] : [])];
+  app.child = spawn(electron, args, { cwd: DIR, env, stdio: ["ignore", "pipe", "pipe"] });
   app.child.stdout.on("data", (d) => { app.log += d; });
   app.child.stderr.on("data", (d) => { app.log += d; });
   app.child.on("exit", (code) => { app.exited = code; });
