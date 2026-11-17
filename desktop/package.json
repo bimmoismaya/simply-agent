@@ -1,0 +1,74 @@
+{
+  "name": "simply-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.mjs",
+  "scripts": {
+    "build": "npm --prefix ../ui run build && node scripts/build.mjs",
+    "start": "npm run build && node scripts/run.mjs dist/main.mjs",
+    "smoke": "npm run build && node scripts/smoke.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/*.test.ts",
+    "pack": "npm run build && electron-builder --linux --dir",
+    "dist": "npm run build && electron-builder --linux deb"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.325",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "puppeteer-core": "^25.17.0",
+    "typescript": "^7.0.2"
+  },
+  "description": "Engine beberapa agent AI dengan UI kanvas",
+  "author": {
+    "name": "Simply Agent",
+    "email": "noreply@example.invalid"
+  },
+  "homepage": "https://example.invalid/simply-agent",
+  "build": {
+    "appId": "dev.local.simply-agent",
+    "productName": "simply-agent",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "!dist/main.smoke.mjs",
+      "!node_modules/@anthropic-ai/claude-agent-sdk-linux-x64-musl{,/**}",
+      "!node_modules/@anthropic-ai/claude-agent-sdk-linux-arm64-musl{,/**}"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/@anthropic-ai/claude-agent-sdk-linux-*/**"
+    ],
+    "linux": {
+      "target": "deb",
+      "category": "Development",
+      "icon": "assets/icon.png",
+      "executableName": "simply-agent",
+      "maintainer": "Simply Agent <noreply@example.invalid>",
+      "synopsis": "Engine beberapa agent AI dengan UI kanvas",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "Name": "Simply Agent",
+          "Comment": "Engine beberapa agent AI",
+          "Keywords": "ai;agent;claude;engine;",
+          "StartupWMClass": "simply-agent"
+        }
+      }
+    },
+    "deb": {
+      "priority": "optional",
+      "packageCategory": "devel"
+    }
+  },
+  "desktopName": "simply-agent.desktop"
+}

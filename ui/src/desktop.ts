@@ -1,0 +1,41 @@
+// Tipe jembatan preload app desktop (window.simply). Di browser biasa objek ini tidak ada.
+export type ToolMode = "read-only" | "all";
+
+export interface DesktopSettings {
+  workspace: string | null;
+  toolMode: ToolMode;
+  tokenBudget: number;
+  budgetUsd: number;
+  models: Record<string, string>;
+  notifications: boolean;
+  /** Selalu kosong dari app; token tidak dikirim ke UI. */
+  tokens: Record<string, string>;
+}
+
+export interface SettingsInfo {
+  settings: DesktopSettings;
+  effectiveWorkspace: string;
+  workspaceLocked: boolean;
+  defaultWorkspace: string;
+  tokenSet: Record<string, boolean>;
+}
+
+export type SaveResult = { ok: true; restart: boolean } | { ok: false; error: string };
+export type ChooseResult = { canceled: true } | { error: string } | { path: string };
+export interface AuthInfo { loggedIn: boolean | null; method?: string; detail: string }
+
+export interface SimplyBridge {
+  connection(): Promise<{ url: string; token: string }>;
+  getSettings(): Promise<SettingsInfo>;
+  saveSettings(s: DesktopSettings): Promise<SaveResult>;
+  chooseWorkspace(): Promise<ChooseResult>;
+  setToken(provider: string, token: string): Promise<{ ok: true } | { ok: false; error: string }>;
+  authStatus(): Promise<AuthInfo>;
+  onOpenSettings(cb: () => void): () => void;
+}
+
+declare global {
+  interface Window { simply?: SimplyBridge }
+}
+
+export const KNOWN_MODELS = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"];

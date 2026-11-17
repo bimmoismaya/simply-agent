@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+@theme {
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Saira Condensed", "JetBrains Mono", sans-serif;
+  --color-ink: #06090c;
+  --color-panel: #0a0e12;
+  --color-panel-2: #0f141a;
+  --color-signal: #22d3ee;
+  --color-text: #d6dde2;
+  --color-dim: #9aa7b0;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}
+
+/* Vignette tipis di atas kanvas. */
+.vignette::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.react-flow__node-group { background: transparent; border: none; padding: 0; }
+.react-flow__minimap { background: var(--color-panel) !important; border: 1px solid rgb(34 211 238 / 0.25); }
+.react-flow__controls { display: none; }
+/* Label edge di atas kartu, supaya tugas yang didelegasikan tidak tertutup. */
+.react-flow__edgelabel-renderer { z-index: 5; }
+
+.glow { box-shadow: 0 0 0 1px rgb(34 211 238 / 0.9), 0 0 28px rgb(34 211 238 / 0.45); }
+
+@keyframes blink { 50% { opacity: 0; } }
+.cursor::after { content: "▍"; color: var(--color-signal); animation: blink 1s steps(1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .pulse-dot { display: none; }
+}

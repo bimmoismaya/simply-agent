@@ -1,0 +1,10 @@
+node_modules/
+dist/
+workspace/.engine/
+*.mp4
+ui/.smoke/
+desktop/dist/
+desktop/release/
+desktop/.smoke/
+workspace/*
+!workspace/.gitkeep

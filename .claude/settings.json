@@ -1,0 +1,24 @@
+{
+  "extraKnownMarketplaces": {
+    "humanizer": { "source": { "source": "github", "repo": "blader/humanizer" } },
+    "anti-slop": { "source": { "source": "github", "repo": "miqdadbadjuber/anti-slop" } },
+    "ponytail": { "source": { "source": "github", "repo": "dietrichgebert/ponytail" } },
+    "superpowers-dev": { "source": { "source": "github", "repo": "obra/superpowers" } },
+    "caveman": { "source": { "source": "github", "repo": "juliusbrussee/caveman" } },
+    "ui-ux-pro-max-skill": { "source": { "source": "github", "repo": "nextlevelbuilder/ui-ux-pro-max-skill" } },
+    "last30days-skill": { "source": { "source": "github", "repo": "mvanhorn/last30days-skill" } },
+    "rea": { "source": { "source": "github", "repo": "morluto/rea" } }
+  },
+  "enabledPlugins": {
+    "humanizer@humanizer": true,
+    "antislop@anti-slop": true,
+    "ponytail@ponytail": true,
+    "superpowers@superpowers-dev": true,
+    "caveman@caveman": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true,
+    "last30days@last30days-skill": true,
+    "rea@rea": true,
+    "claude-code-setup@claude-plugins-official": true,
+    "claude-security@claude-plugins-official": true
+  }
+}
