@@ -186,7 +186,7 @@ try {
   await sleep(200);
   const openSettings = () => page.evaluate(() => document.querySelector('button[aria-label="Pengaturan"]').click());
   await openSettings();
-  await page.waitForSelector('[role="dialog"]', { timeout: 5000 });
+  await page.waitForSelector('[data-testid="workspace-path"]', { timeout: 5000 }); // isi dialog, bukan hanya kerangkanya
   const wsShown = await page.$eval('[data-testid="workspace-path"]', (e) => e.textContent);
   check("dialog Pengaturan menampilkan workspace", wsShown === WORKSPACE, wsShown);
   const dialogText = await page.$eval('[role="dialog"]', (e) => e.textContent);
@@ -217,7 +217,8 @@ try {
 
   // Ubah lewat UI: mode baca+tulis, budget USD 2.5, model Dax ke Haiku.
   await openSettings();
-  await page.waitForSelector('[role="dialog"]');
+  // Dialog tampil dulu dengan "Memuat pengaturan…"; tunggu isinya (radio) sebelum mengklik.
+  await page.waitForSelector('input[name="toolMode"]');
   await page.evaluate(() => [...document.querySelectorAll('input[name="toolMode"]')][1].click());
   const warn = await page.waitForSelector('[role="note"]', { timeout: 3000 }).then(() => true).catch(() => false);
   check("mode baca+tulis menampilkan peringatan sandbox", warn);
