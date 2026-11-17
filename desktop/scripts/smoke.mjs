@@ -224,6 +224,7 @@ try {
   await page.keyboard.down("Control"); await page.keyboard.press("a"); await page.keyboard.up("Control");
   await page.keyboard.type("2.5");
   await page.select('select[aria-label="Model Dax"]', "claude-haiku-5-5");
+  await page.type('input[aria-label="Nama panggilan"]', "Uji");
   await page.screenshot({ path: join(OUT, "4-pengaturan.png") });
   await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => /simpan/i.test(b.textContent)).click());
   await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 5000 });
@@ -233,6 +234,7 @@ try {
   const daxRow = await page.evaluate(() => [...document.querySelectorAll("nav button")].find((b) => b.textContent.includes("Dax")).textContent);
   check("model Dax berubah ke Haiku di sidebar", daxRow.includes("claude-haiku-5-5"), daxRow);
   const saved = JSON.parse(readFileSync(join(PROFILE, "settings.json"), "utf8"));
+  check("sapaan nama panggilan tampil di halaman utama", (await page.evaluate(() => document.querySelector('[data-testid="info-account"]')?.textContent ?? "")).includes("Halo, Uji"));
   check("pengaturan tersimpan di folder data pengguna", saved.toolMode === "all" && saved.budgetUsd === 2.5 && saved.models.dax === "claude-haiku-5-5", JSON.stringify(saved).slice(0, 120));
   check("state engine ada di folder data pengguna", existsSync(join(PROFILE, "state", "state.json")));
   check("tidak ada state di dalam workspace agent", !existsSync(join(WORKSPACE, ".engine")));

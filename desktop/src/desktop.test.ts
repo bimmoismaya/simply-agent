@@ -79,3 +79,9 @@ test("tokenStatus: kosong memblokir, terisi lolos", () => {
   assert.equal(tokenStatus("").loggedIn, false);
   assert.equal(tokenStatus("sk-ant-oat01-abc").loggedIn, true);
 });
+
+test("nickname: spasi dipangkas, kosong bawaan, lebih dari 40 karakter ditolak", () => {
+  assert.equal(SettingsSchema.parse({}).nickname, "");
+  assert.equal(SettingsSchema.parse({ nickname: "  Bimmo " }).nickname, "Bimmo");
+  assert.equal(SettingsSchema.safeParse({ nickname: "x".repeat(41) }).success, false);
+});

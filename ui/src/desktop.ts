@@ -8,6 +8,7 @@ export interface DesktopSettings {
   budgetUsd: number;
   models: Record<string, string>;
   notifications: boolean;
+  nickname: string;
   /** Selalu kosong dari app; token tidak dikirim ke UI. */
   tokens: Record<string, string>;
   plugins: string[];

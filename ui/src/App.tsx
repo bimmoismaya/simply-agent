@@ -31,9 +31,15 @@ function Canvas() {
   const [rechecking, setRechecking] = useState(false);
   const [workspace, setWorkspace] = useState<string>();
   const [account, setAccount] = useState<AccountSummary>();
-  useEffect(() => {
-    window.simply?.getSettings().then((i) => { setWorkspace(i.effectiveWorkspace); if (!i.settings.setupDone) setSettingsOpen(true); }).catch(() => {});
+  const [nickname, setNickname] = useState("");
+  const loadProfile = useCallback((first = false) => {
+    window.simply?.getSettings().then((i) => {
+      setWorkspace(i.effectiveWorkspace);
+      setNickname(i.settings.nickname);
+      if (first && !i.settings.setupDone) setSettingsOpen(true);
+    }).catch(() => {});
   }, []);
+  useEffect(() => { loadProfile(true); }, [loadProfile]);
 
   // Hanya di app desktop: menu "Pengaturan…" dari proses utama, dan cek login Claude saat mulai.
   useEffect(() => window.simply?.onOpenSettings(() => setSettingsOpen(true)), []);
@@ -91,7 +97,7 @@ function Canvas() {
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar agents={agents} session={session} connection={connection} lastError={lastError} workspace={workspace} account={account} onSettings={desktop ? () => setSettingsOpen(true) : undefined} />
+      <TopBar agents={agents} session={session} connection={connection} lastError={lastError} workspace={workspace} account={account} nickname={nickname} onSettings={desktop ? () => setSettingsOpen(true) : undefined} />
       <div className="flex min-h-0 flex-1">
         <Sidebar agents={ordered} selectedId={selectedId} onSelect={select} />
         <main className="vignette relative flex-1">
@@ -148,7 +154,7 @@ function Canvas() {
           )}
           <CommandBar agents={ordered} onSend={sendCommand} onStopAll={stopAll} />
         </main>
-        {settingsOpen && <SettingsDialog agents={ordered} onClose={() => { setSettingsOpen(false); void checkAuth(); loadAccount(); }} />}
+        {settingsOpen && <SettingsDialog agents={ordered} onClose={() => { setSettingsOpen(false); void checkAuth(); loadAccount(); loadProfile(); }} />}
         {selected && <Drawer agent={selected} onClose={() => setSelectedId(null)} onControl={control} />}
       </div>
     </div>

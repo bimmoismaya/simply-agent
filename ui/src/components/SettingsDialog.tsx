@@ -103,6 +103,13 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
         )}
 
         <section>
+          <h3 className="mb-1 font-display text-[12px] uppercase tracking-[0.25em] text-signal">nama panggilan</h3>
+          <input type="text" maxLength={40} autoComplete="off" placeholder="mis. Bimmo (opsional)" value={draft.nickname}
+            onChange={(e) => set("nickname", e.target.value)} className={field} aria-label="Nama panggilan" />
+          <p className="mt-1 text-[10px] text-dim">Dipakai untuk menyapa Anda di halaman utama. Hanya disimpan di komputer ini.</p>
+        </section>
+
+        <section>
           <h3 className="mb-1 font-display text-[12px] uppercase tracking-[0.25em] text-signal">plugin agent</h3>
           <p className="mb-2 text-[10px] text-dim">
             Diunduh otomatis saat dipilih dan dicek sebelum tiap agent jalan. Hanya untuk agent Claude; Codex dan Gemini tidak memakai plugin.
