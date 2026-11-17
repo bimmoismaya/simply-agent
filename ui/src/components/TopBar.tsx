@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Agent, SessionInfo } from "../../../shared/types.ts";
+import type { AccountSummary } from "../desktop";
 import type { Connection } from "../hooks/useAgents";
 import { formatTokens, formatUsd } from "./status";
 
@@ -16,13 +17,15 @@ function elapsed(from: number, now: number) {
   return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
 }
 
-export function TopBar({ agents, session, connection, lastError, workspace, onSettings }: {
+export function TopBar({ agents, session, connection, lastError, workspace, account, onSettings }: {
   agents: Agent[];
   session: SessionInfo | null;
   connection: Connection;
   lastError: string | null;
   /** Folder kerja agent; hanya diketahui di app desktop. */
   workspace?: string;
+  /** Akun Claude yang terhubung dengan token; hanya diketahui di app desktop setelah token diisi. */
+  account?: AccountSummary;
   /** Hanya ada di app desktop. */
   onSettings?: () => void;
 }) {
@@ -88,8 +91,15 @@ export function TopBar({ agents, session, connection, lastError, workspace, onSe
         ))}
       </span>
       {workspace && (
-        <span className="min-w-0 truncate" title={workspace}>
+        <span className="min-w-0 flex-1 truncate" title={workspace}>
           folder <span className="text-zinc-100" data-testid="info-workspace">{workspace}</span>
+        </span>
+      )}
+      {account?.email && (
+        <span className="ml-auto shrink-0" data-testid="info-account" title="Akun Claude yang terhubung dengan token">
+          akun <span className="text-zinc-100">{account.email}</span>
+          {account.organization && <span> · {account.organization}</span>}
+          {account.plan && <span> · {account.plan}</span>}
         </span>
       )}
     </div>

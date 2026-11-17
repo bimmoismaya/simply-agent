@@ -11,7 +11,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { Drawer } from "./components/Drawer";
 import { SettingsDialog } from "./components/SettingsDialog";
-import type { AuthInfo } from "./desktop";
+import type { AccountSummary, AuthInfo } from "./desktop";
 
 const nodeTypes = { agent: AgentNode, group: GroupNode, preview: PreviewNode };
 const edgeTypes = { pulse: PulseEdge };
@@ -30,12 +30,18 @@ function Canvas() {
   const [auth, setAuth] = useState<AuthInfo | null>(null);
   const [rechecking, setRechecking] = useState(false);
   const [workspace, setWorkspace] = useState<string>();
+  const [account, setAccount] = useState<AccountSummary>();
   useEffect(() => {
     window.simply?.getSettings().then((i) => { setWorkspace(i.effectiveWorkspace); if (!i.settings.setupDone) setSettingsOpen(true); }).catch(() => {});
   }, []);
 
   // Hanya di app desktop: menu "Pengaturan…" dari proses utama, dan cek login Claude saat mulai.
   useEffect(() => window.simply?.onOpenSettings(() => setSettingsOpen(true)), []);
+  // Akun yang terhubung dengan token: diambil saat mulai dan setiap token bisa berubah (dialog Pengaturan ditutup).
+  const loadAccount = useCallback(() => {
+    window.simply?.claudeInfo().then((r) => setAccount(r.ok ? r.account : undefined)).catch(() => setAccount(undefined));
+  }, []);
+  useEffect(() => { loadAccount(); }, [loadAccount]);
   const checkAuth = useCallback(async () => {
     if (!window.simply) return;
     setRechecking(true);
@@ -85,7 +91,7 @@ function Canvas() {
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar agents={agents} session={session} connection={connection} lastError={lastError} workspace={workspace} onSettings={desktop ? () => setSettingsOpen(true) : undefined} />
+      <TopBar agents={agents} session={session} connection={connection} lastError={lastError} workspace={workspace} account={account} onSettings={desktop ? () => setSettingsOpen(true) : undefined} />
       <div className="flex min-h-0 flex-1">
         <Sidebar agents={ordered} selectedId={selectedId} onSelect={select} />
         <main className="vignette relative flex-1">
@@ -142,7 +148,7 @@ function Canvas() {
           )}
           <CommandBar agents={ordered} onSend={sendCommand} onStopAll={stopAll} />
         </main>
-        {settingsOpen && <SettingsDialog agents={ordered} onClose={() => { setSettingsOpen(false); void checkAuth(); }} />}
+        {settingsOpen && <SettingsDialog agents={ordered} onClose={() => { setSettingsOpen(false); void checkAuth(); loadAccount(); }} />}
         {selected && <Drawer agent={selected} onClose={() => setSelectedId(null)} onControl={control} />}
       </div>
     </div>

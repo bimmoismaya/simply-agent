@@ -128,7 +128,7 @@ try {
     bridgeKeys: Object.keys(window.simply ?? {}).sort(),
   }));
   check("renderer tidak punya require/process (tanpa akses Node)", surface.require === "undefined" && surface.process === "undefined", JSON.stringify(surface));
-  const expectedKeys = ["authStatus", "chooseWorkspace", "connection", "getSettings", "listModels", "onOpenSettings", "saveSettings", "setToken"];
+  const expectedKeys = ["authStatus", "chooseWorkspace", "claudeInfo", "connection", "getSettings", "onOpenSettings", "saveSettings", "setToken"];
   check("jembatan preload hanya menyediakan 8 fungsi yang direncanakan", surface.bridgeKeys.join() === expectedKeys.join(), surface.bridgeKeys.join());
 
   // CSP dibuktikan lewat pelanggaran sungguhan: fetch ke luar harus ditolak oleh connect-src, bukan oleh jaringan.
@@ -238,6 +238,8 @@ try {
   check("tidak ada state di dalam workspace agent", !existsSync(join(WORKSPACE, ".engine")));
 
   const infoBar = await page.evaluate(() => document.querySelector('[data-testid="info-bar"]')?.textContent ?? "");
+  const acct = await page.evaluate(() => document.querySelector('[data-testid="info-account"]')?.textContent ?? "");
+  check("halaman utama menampilkan akun yang terhubung dengan token", acct.includes("uji@contoh.test") && acct.includes("Org Uji") && acct.includes("max"), acct);
   check("halaman utama menampilkan AI dan folder", infoBar.includes("claude") && infoBar.includes(WORKSPACE), infoBar.slice(0, 120));
 
   // Plugin: id di luar katalog dibuang, tidak pernah dipakai sebagai URL atau path.

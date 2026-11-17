@@ -8,7 +8,7 @@ import {
 import type { AgentStatus, SessionInfo } from "../../shared/types.ts";
 import { startServer } from "../../server/src/index.ts";
 import { defaultRunner, type Limits, type Runner } from "../../server/src/engine.ts";
-import { listClaudeModels, type ModelChoice } from "../../server/src/models.ts";
+import { loadClaudeInfo, type ClaudeInfo } from "../../server/src/models.ts";
 import { ensurePlugins, isInstalled, PLUGINS } from "../../server/src/plugins.ts";
 import { TOKEN_ENV, tokenStatus, type AuthStatus } from "./auth.ts";
 import { agentNote, budgetNote, isBusy } from "./notify.ts";
@@ -21,8 +21,8 @@ export interface LaunchOptions {
   limits?: Limits;
   /** Untuk smoke test: ganti pengecekan token Claude. */
   authCheck?: () => Promise<AuthStatus>;
-  /** Untuk smoke test: ganti pengambilan daftar model dari provider. */
-  listModels?: () => Promise<ModelChoice[]>;
+  /** Untuk smoke test: ganti pengambilan model dan info akun dari provider. */
+  claudeInfo?: () => Promise<ClaudeInfo>;
   /** Untuk smoke test: buka port DevTools protocol (hanya di localhost). Tidak pernah diisi di app biasa. */
   debugPort?: number;
 }
@@ -248,16 +248,16 @@ export async function launch(opts: LaunchOptions = {}) {
     return { ok: true };
   });
 
-  // Daftar model dari akun provider. Di-cache per token; token baru berarti ambil ulang.
-  let modelCache: { key: string; models: ModelChoice[] } | null = null;
-  guarded("simply:listModels", async () => {
+  // Model dan identitas akun dari provider. Di-cache per token; token baru berarti ambil ulang.
+  let infoCache: { key: string; info: ClaudeInfo } | null = null;
+  guarded("simply:claudeInfo", async () => {
     const key = settings.tokens.claude ?? "";
     if (!key) return { ok: false, error: "Token Claude belum diisi." };
-    if (modelCache?.key === key) return { ok: true, models: modelCache.models };
+    if (infoCache?.key === key) return { ok: true, ...infoCache.info };
     try {
-      const models = await (opts.listModels ?? listClaudeModels)();
-      modelCache = { key, models };
-      return { ok: true, models };
+      const info = await (opts.claudeInfo ?? loadClaudeInfo)();
+      infoCache = { key, info };
+      return { ok: true, ...info };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }

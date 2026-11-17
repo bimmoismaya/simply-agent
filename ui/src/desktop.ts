@@ -26,6 +26,7 @@ export interface SettingsInfo {
 
 export type SaveResult = { ok: true; restart: boolean; pluginErrors: Record<string, string> } | { ok: false; error: string };
 export type ChooseResult = { canceled: true } | { error: string } | { path: string };
+export interface AccountSummary { email?: string; organization?: string; plan?: string }
 export interface AuthInfo { loggedIn: boolean | null; method?: string; detail: string }
 
 export interface SimplyBridge {
@@ -34,7 +35,7 @@ export interface SimplyBridge {
   saveSettings(s: DesktopSettings): Promise<SaveResult>;
   chooseWorkspace(): Promise<ChooseResult>;
   setToken(provider: string, token: string): Promise<{ ok: true } | { ok: false; error: string }>;
-  listModels(): Promise<{ ok: true; models: { value: string; name: string }[] } | { ok: false; error: string }>;
+  claudeInfo(): Promise<{ ok: true; models: { value: string; name: string }[]; account: AccountSummary } | { ok: false; error: string }>;
   authStatus(): Promise<AuthInfo>;
   onOpenSettings(cb: () => void): () => void;
 }

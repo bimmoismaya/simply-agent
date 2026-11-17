@@ -31,7 +31,7 @@ export function SettingsDialog({ agents, onClose }: { agents: Agent[]; onClose: 
     if (!hasClaude) { setModels(null); setModelsError(null); return; }
     let alive = true;
     setModels(null); setModelsError(null);
-    window.simply?.listModels().then((r) => { if (!alive) return; if (r.ok) setModels(r.models); else setModelsError(r.error); })
+    window.simply?.claudeInfo().then((r) => { if (!alive) return; if (r.ok) setModels(r.models); else setModelsError(r.error); })
       .catch((e) => alive && setModelsError(String(e)));
     return () => { alive = false; };
   }, [hasClaude, tokenRev]);
