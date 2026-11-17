@@ -95,11 +95,20 @@ try {
   const hint = await page.$('[data-testid="models-hint"]').then(Boolean);
   const modelSelects = await page.$$eval('select[aria-label^="Model "]', (e) => e.length);
   check("tanpa token Claude: model per agent hanya petunjuk", hint && modelSelects === 0, `hint=${hint} select=${modelSelects}`);
+  const navBefore = await page.$$eval("nav button", (e) => e.length);
+  const emptyCard = await page.$('[data-testid="no-agents"]').then(Boolean);
+  check("tanpa token: agent tidak ditampilkan, ada petunjuk", emptyCard && navBefore === 0, `kartu=${emptyCard} sidebar=${navBefore}`);
+  // Pasang token Claude lewat UI, seperti pengguna sungguhan.
+  await page.type('input[aria-label="Token claude"]', "token-uji");
+  await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^pasang$/i.test(b.textContent.trim())).click());
+  await page.waitForSelector('select[aria-label="Model Dax"]', { timeout: 5000 });
   await page.click('input[aria-label="Batas biaya USD"]', { clickCount: 3 });
   await page.keyboard.type("1"); // Menyimpan menerapkan batas dari dialog; pertahankan batas uji $1.
   // Menyimpan menandai pengaturan awal selesai; tanpa itu dialog muncul lagi setiap halaman dimuat ulang.
   await page.evaluate(() => [...document.querySelectorAll('[role="dialog"] button')].find((b) => /^simpan$/i.test(b.textContent.trim())).click());
   await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 5000 }).catch(() => {});
+  const shown = await page.waitForFunction(() => document.querySelectorAll("nav button").length === 8 && !document.querySelector('[data-testid="no-agents"]'), { timeout: 5000 }).then(() => true).catch(() => false);
+  check("setelah token terpasang: 8 agent tampil", shown);
   check("simpan menutup pengaturan awal dan menandainya selesai", !(await dialogOpen(page)) && JSON.parse(readFileSync(join(PROFILE, "settings.json"), "utf8")).setupDone === true);
 
   // Banner login: cek pertama "belum login", tombol Cek ulang menghilangkannya.

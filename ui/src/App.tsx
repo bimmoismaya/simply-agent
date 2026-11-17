@@ -22,7 +22,7 @@ const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
 
 function Canvas() {
-  const { agents, edges, session, connection, lastError, sendCommand, control } = useAgents();
+  const { agents: allAgents, edges: allEdges, session, connection, lastError, sendCommand, control } = useAgents();
   const { setCenter, fitView } = useReactFlow();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const desktop = !!window.simply;
@@ -32,10 +32,16 @@ function Canvas() {
   const [workspace, setWorkspace] = useState<string>();
   const [account, setAccount] = useState<AccountSummary>();
   const [nickname, setNickname] = useState("");
+  // Di app desktop agent baru ditampilkan setelah token Claude terpasang. null = belum diketahui (dianggap belum).
+  const [hasToken, setHasToken] = useState<boolean | null>(null);
+  const locked = desktop && hasToken !== true;
+  const agents = locked ? [] : allAgents;
+  const edges = locked ? [] : allEdges;
   const loadProfile = useCallback((first = false) => {
     window.simply?.getSettings().then((i) => {
       setWorkspace(i.effectiveWorkspace);
       setNickname(i.settings.nickname);
+      setHasToken(!!i.tokenSet.claude);
       if (first && !i.settings.setupDone) setSettingsOpen(true);
     }).catch(() => {});
   }, []);
@@ -152,9 +158,23 @@ function Canvas() {
               <code className="mt-1 block text-zinc-100">http://localhost:5173/?token=…</code>
             </div>
           )}
-          <CommandBar agents={ordered} onSend={sendCommand} onStopAll={stopAll} />
+          {locked && (
+            <div data-testid="no-agents" className="absolute inset-0 z-10 flex items-center justify-center p-6 text-center">
+              <div className="max-w-sm border border-signal/30 bg-panel/90 p-5 text-xs leading-5 text-dim">
+                <p className="mb-1 font-display text-[13px] uppercase tracking-[0.25em] text-zinc-100">belum ada agent</p>
+                Agent muncul setelah token Claude terpasang.
+                <div className="mt-3">
+                  <button onClick={() => setSettingsOpen(true)}
+                    className="border border-signal/50 px-3 py-1 text-[11px] uppercase tracking-widest text-cyan-100 outline-none hover:bg-signal/15 focus-visible:ring-1 focus-visible:ring-signal">
+                    isi token
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {!locked && <CommandBar agents={ordered} onSend={sendCommand} onStopAll={stopAll} />}
         </main>
-        {settingsOpen && <SettingsDialog agents={ordered} onClose={() => { setSettingsOpen(false); void checkAuth(); loadAccount(); loadProfile(); }} />}
+        {settingsOpen && <SettingsDialog agents={orderAgents(allAgents)} onClose={() => { setSettingsOpen(false); void checkAuth(); loadAccount(); loadProfile(); }} />}
         {selected && <Drawer agent={selected} onClose={() => setSelectedId(null)} onControl={control} />}
       </div>
     </div>
